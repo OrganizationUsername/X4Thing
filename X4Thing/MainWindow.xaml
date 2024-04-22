@@ -3,57 +3,47 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:X4Thing"
+        xmlns:local="clr-namespace:X4Thing" 
+        xmlns:behaviors="http://schemas.microsoft.com/xaml/behaviors"
         mc:Ignorable="d"
         Title="MainWindow" Height="450" Width="800" 
         d:DataContext="{local:MainWindowViewModel}">
-    <StackPanel>
-        <TextBlock Text="{Binding Title}" />
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
 
-        <ListBox ItemsSource="{Binding Ships}">
-            <ListBox.ItemTemplate>
+        <TextBlock Text="{Binding Title}" Grid.Row="0" />
+
+        <DataGrid ItemsSource="{Binding Ships}" AutoGenerateColumns="False" Grid.Row="1" CanUserAddRows="False" 
+                  RowDetailsVisibilityMode="Visible">
+            <!--behaviors:DataGridRowBehavior.RowDoubleClickCommand="{Binding ShipDetailsCommand}"-->
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Name" Binding="{Binding Ship.Name}" />
+                <DataGridTextColumn Header="Storage Capacity" Binding="{Binding Ship.StorageCapacity}" />
+                <DataGridTextColumn Header="Location" Binding="{Binding Ship.Location}" />
+            </DataGrid.Columns>
+            <DataGrid.RowDetailsTemplate>
                 <DataTemplate>
-                    <StackPanel>
-                        <TextBlock Text="{Binding Name}" />
-                        <TextBlock Text="{Binding StorageCapacity}" />
-                        <TextBlock Text="{Binding Location}" />
-                        <ListBox ItemsSource="{Binding Inventory}">
-                            <ListBox.ItemTemplate>
-                                <DataTemplate>
-                                    <StackPanel>
-                                        <TextBlock Text="{Binding Ware.Name}" />
-                                        <TextBlock Text="{Binding Quantity}" />
-                                    </StackPanel>
-                                </DataTemplate>
-                            </ListBox.ItemTemplate>
-                        </ListBox>
-                    </StackPanel>
+                    <DataGrid ItemsSource="{Binding Ship.Inventory}" AutoGenerateColumns="False" CanUserAddRows="False">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Ware Name" Binding="{Binding Ware.Name}" />
+                            <DataGridTextColumn Header="Quantity" Binding="{Binding Quantity}" />
+                        </DataGrid.Columns>
+                    </DataGrid>
                 </DataTemplate>
-            </ListBox.ItemTemplate>
-        </ListBox>
+            </DataGrid.RowDetailsTemplate>
+        </DataGrid>
 
-        <ListBox ItemsSource="{Binding Stations}">
-            <ListBox.ItemTemplate>
-                <DataTemplate>
-                    <StackPanel>
-                        <TextBlock Text="{Binding Name}" />
-                        <TextBlock Text="{Binding Location}" />
-                        <ListBox ItemsSource="{Binding Inventory}">
-                            <ListBox.ItemTemplate>
-                                <DataTemplate>
-                                    <StackPanel>
-                                        <TextBlock Text="{Binding Ware.Name}" />
-                                        <TextBlock Text="{Binding Quantity}" />
-                                    </StackPanel>
-                                </DataTemplate>
-                            </ListBox.ItemTemplate>
-                        </ListBox>
-                    </StackPanel>
-                </DataTemplate>
-            </ListBox.ItemTemplate>
-        </ListBox>
-
-
-    </StackPanel>
+        <DataGrid ItemsSource="{Binding Stations}" AutoGenerateColumns="False" Grid.Row="2" CanUserAddRows="False">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Name" Binding="{Binding Name}" />
+                <DataGridTextColumn Header="Location" Binding="{Binding Location}" />
+                <!-- Similarly, for Inventory or other complex properties, consider using DataGridTemplateColumn -->
+            </DataGrid.Columns>
+        </DataGrid>
+    </Grid>
 
 </Window>
