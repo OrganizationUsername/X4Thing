@@ -1,0 +1,59 @@
+﻿<Window x:Class="X4Thing.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:X4Thing"
+        mc:Ignorable="d"
+        Title="MainWindow" Height="450" Width="800" 
+        d:DataContext="{local:MainWindowViewModel}">
+    <StackPanel>
+        <TextBlock Text="{Binding Title}" />
+
+        <ListBox ItemsSource="{Binding Ships}">
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <StackPanel>
+                        <TextBlock Text="{Binding Name}" />
+                        <TextBlock Text="{Binding StorageCapacity}" />
+                        <TextBlock Text="{Binding Location}" />
+                        <ListBox ItemsSource="{Binding Inventory}">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding Ware.Name}" />
+                                        <TextBlock Text="{Binding Quantity}" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </StackPanel>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+
+        <ListBox ItemsSource="{Binding Stations}">
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <StackPanel>
+                        <TextBlock Text="{Binding Name}" />
+                        <TextBlock Text="{Binding Location}" />
+                        <ListBox ItemsSource="{Binding Inventory}">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding Ware.Name}" />
+                                        <TextBlock Text="{Binding Quantity}" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </StackPanel>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+
+
+    </StackPanel>
+
+</Window>

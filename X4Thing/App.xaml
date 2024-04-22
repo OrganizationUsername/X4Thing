@@ -1,0 +1,5 @@
+﻿<Application x:Class="X4Thing.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:X4Thing"
+             Startup="Application_Startup" />
