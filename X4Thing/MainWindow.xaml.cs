@@ -37,12 +37,19 @@ public partial class MainWindowViewModel : ObservableObject
             StorageCapacity = 100,
             Location = new Vector3(0, 0, 0),
             Inventory =
-            [
-                new(){Ware = Ware.Food, Quantity = 10, },
-                new(){Ware = Ware.Energy, Quantity = 05, },
-            ],
-            Weapons = [new() { Name = "W1", Damage = 10, Range = 10, FireRate = 1, },],
+                [
+                    new(){Ware = Ware.Food, Quantity = 10, },
+                    new(){Ware = Ware.Energy, Quantity = 05, },
+                ],
+            Weapons =
+                [new()
+                    {
+                        Name = "W1", Damage = 10, Range = 10, FireRate = 1,
+                        Damages = [new DamageQuantity() { DamageType = DamageType.Kinetic, Quantity = 10, },],
+                    },
+                ],
         });
+
         Stations.Add(new Station
         {
             Name = "S1",
@@ -98,6 +105,7 @@ public class Station
     public List<Ship> LandedShips { get; set; } = [];
     public List<ProductionModule> ProductionModules { get; set; } = [];
     public List<Weapon> Weapons { get; set; } = [];
+    public List<BuildProgress> BuildProgresses { get; set; } = [];
 }
 
 public class Ship
@@ -120,7 +128,13 @@ public class BuildRecipe
     public required string Name { get; set; }
     public List<WareQuantity> WareQuantities { get; set; } = [];
     public long TimeToBuild { get; set; }
-    public long TimeSpentSoFar { get; set; } = 0;
+}
+
+public class BuildProgress
+{
+    public required BuildRecipe BuildRecipe { get; set; }
+    public long TimeRemaining { get; set; }
+    public bool InProgress { get; set; } //so we know whether to decrement TimeRemaining
 }
 
 public class Ware(string name, long volume, long mass)
@@ -141,6 +155,19 @@ public class Weapon
 {
     public required string Name { get; set; }
     public float Damage { get; set; }
+    public List<DamageQuantity> Damages { get; set; } = [];
     public float Range { get; set; }
     public float FireRate { get; set; }
+}
+
+public class DamageQuantity
+{
+    public required DamageType DamageType { get; set; }
+    public float Quantity { get; set; }
+}
+
+public class DamageType
+{
+    public static DamageType Kinetic = new();
+    public static DamageType Energy = new();
 }
