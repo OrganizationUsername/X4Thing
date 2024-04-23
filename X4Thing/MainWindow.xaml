@@ -18,23 +18,19 @@
         <TextBlock Text="{Binding Title}" Grid.Row="0" />
 
         <DataGrid ItemsSource="{Binding Ships}" AutoGenerateColumns="False" Grid.Row="1" CanUserAddRows="False" RowDetailsVisibilityMode="Visible"  SelectedItem="{Binding SelectedShip}" >
-            <!--ref: https://stackoverflow.com/questions/3876662/wpf-datagrid-commandbinding-to-a-double-click-instead-of-using-events-->
             <DataGrid.InputBindings>
                 <MouseBinding
                     MouseAction="LeftDoubleClick"
                     Command="{Binding DoubleClickDataGridRowCommand}"/>
-                <!--DoubleClickDataGridRowCommand toggles the ships' visibility based on the viewmodel's boolean.-->
             </DataGrid.InputBindings>
             <DataGrid.Columns>
-                <!--if they want to change the name, it should be done elsewhere.-->
                 <DataGridTextColumn Header="Name" Binding="{Binding Ship.Name}" IsReadOnly="True" />
                 <DataGridTextColumn Header="Storage Capacity" Binding="{Binding Ship.StorageCapacity}" IsReadOnly="True" />
                 <DataGridTextColumn Header="Location" Binding="{Binding Ship.Location}" IsReadOnly="True" />
-                <!--<DataGridTextColumn Header="ShowInventory" Binding="{Binding ShowInventory}" IsReadOnly="True" />-->
             </DataGrid.Columns>
             <DataGrid.RowDetailsTemplate>
                 <DataTemplate>
-                    <DataGrid ItemsSource="{Binding Ship.Inventory}" AutoGenerateColumns="False" CanUserAddRows="False">
+                    <DataGrid ItemsSource="{Binding Ship.Inventory}" AutoGenerateColumns="False" CanUserAddRows="False" d:DataContext="{d:ShipViewModel}">
                         <DataGrid.Style>
                             <Style TargetType="DataGrid">
                                 <Setter Property="Visibility" Value="Collapsed"/>
@@ -56,11 +52,10 @@
 
         <DataGrid ItemsSource="{Binding Stations}" AutoGenerateColumns="False" Grid.Row="2" CanUserAddRows="False">
             <DataGrid.Columns>
-                <DataGridTextColumn Header="Name" Binding="{Binding Name}" />
-                <DataGridTextColumn Header="Location" Binding="{Binding Location}" />
+                <DataGridTextColumn Header="Name" Binding="{Binding Name}" IsReadOnly="True" />
+                <DataGridTextColumn Header="Location" Binding="{Binding Location}" IsReadOnly="True" />
                 <!-- Similarly, for Inventory or other complex properties, consider using DataGridTemplateColumn -->
             </DataGrid.Columns>
         </DataGrid>
     </Grid>
-
 </Window>

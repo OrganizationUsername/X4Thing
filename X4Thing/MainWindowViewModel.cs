@@ -54,7 +54,7 @@ public partial class MainWindowViewModel : ObservableObject
         {
             Name = "S1",
             StorageCapacity = 100,
-            Location = new Vector3(0, 0, 0),
+            Location = new Vector3(00, 00, 00),
             Inventory =
             [
                 new(){Ware = Ware.Food, Quantity = 10, },
@@ -75,7 +75,7 @@ public partial class MainWindowViewModel : ObservableObject
         {
             Name = "XX",
             StorageCapacity = 100,
-            Location = new Vector3(0, 0, 0),
+            Location = new Vector3(50, 50, 50),
             Inventory =
             [
                 new(){Ware = Ware.Steel, Quantity = 10, },
@@ -96,10 +96,8 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     public void DoubleClickDataGridRow()
     {
-        if (SelectedShip != null)
-        {
-            SelectedShip.ShowInventory = !SelectedShip.ShowInventory;
-        }
+        if (SelectedShip == null) { return; }
+        SelectedShip.ShowInventory = !SelectedShip.ShowInventory;
     }
 
     public void MoveShipToStation(Ship ship, Station station)
@@ -181,7 +179,7 @@ public class ProductionModule
     public long TimeToBuild { get; set; }
 }
 
-public class Station
+public class Station : IFollowOrders
 {
     public required string Name { get; set; }
     public long StorageCapacity { get; set; }
@@ -193,21 +191,42 @@ public class Station
     public List<BuildProgress> BuildProgresses { get; set; } = [];
 }
 
-public class Ship
+public class Ship : IFollowOrders
 {
     public required string Name { get; set; }
     public long StorageCapacity { get; set; }
     public Vector3 Location { get; set; }
     public List<WareQuantity> Inventory { get; set; } = [];
-    public List<WareQuantity> InventoryFutureCredits { get; set; } = []; //so we can plan out actions in advance
-    public List<WareQuantity> InventoryFutureDebits { get; set; } = [];
     public List<Weapon> Weapons { get; set; } = [];
+    public List<QueuedOrder> Orders { get; set; } = [];
+    public List<FutureWareTransaction> InventoryFutureCredits { get; set; } = [];// "Incoming"
+    public List<FutureWareTransaction> InventoryFutureDebits { get; set; } = []; // "On Hold"
 }
 
-public class OrderQueue
+public class QueuedOrder
 {
     //This class will be used to queue up orders for ships to execute.
     //probably just a bunch of actions. One of them will be to move to a location. Another will be attack or trade.
+}
+
+public interface IOrder
+{
+    string Name { get; set; }
+    bool Completed { get; set; }
+    bool CanExecute(IFollowOrders s);
+    void Execute(IFollowOrders s);
+}
+
+public interface IFollowOrders
+{
+
+}
+
+public class FutureWareTransaction
+{
+    public required WareQuantity WareQuantity { get; set; }
+    public Ship? Ship { get; set; }
+    public Station? Station { get; set; }
 }
 
 public class WareQuantity
