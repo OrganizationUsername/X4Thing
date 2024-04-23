@@ -1,6 +1,7 @@
 ﻿using System.Collections.ObjectModel;
 using System.Numerics;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 
 namespace X4Thing;
 
@@ -10,7 +11,7 @@ public partial class MainWindowViewModel : ObservableObject
     public long Money { get; set; } = 100;
 
     public ObservableCollection<ShipViewModel> Ships { get; set; } = [];
-    [ObservableProperty] private Ship? _selectedShip;
+    [ObservableProperty] private ShipViewModel? _selectedShip;
     public ObservableCollection<Station> Stations { get; set; } = [];
 
     public MainWindowViewModel()
@@ -22,26 +23,7 @@ public partial class MainWindowViewModel : ObservableObject
         //Then the user sends the trade ship to trade resources to build a combat ship.
         //Then the user sends the combat ship to destroy an enemy ship.
 
-        var ship = new Ship
-        {
-            Name = "S1",
-            StorageCapacity = 100,
-            Location = new Vector3(0, 0, 0),
-            Inventory =
-            [
-                new(){Ware = Ware.Food, Quantity = 10, },
-                new(){Ware = Ware.Energy, Quantity = 05, },
-            ],
-            Weapons =
-            [new()
-                {
-                    Name = "W1", Damage = 10, Range = 10, FireRate = 1,
-                    Damages = [new DamageQuantity() { DamageType = DamageType.Kinetic, Quantity = 10, },],
-                },
-            ],
-        };
-        //instead of this type of flow, I should have a ShipManager class that handles all 
-        Ships.Add(new() { Ship = ship, });
+        AddShips();
 
         Stations.Add(new Station
         {
@@ -64,6 +46,60 @@ public partial class MainWindowViewModel : ObservableObject
                 },
             ],
         });
+    }
+
+    private void AddShips()
+    {
+        var ship = new Ship
+        {
+            Name = "S1",
+            StorageCapacity = 100,
+            Location = new Vector3(0, 0, 0),
+            Inventory =
+            [
+                new(){Ware = Ware.Food, Quantity = 10, },
+                new(){Ware = Ware.Energy, Quantity = 05, },
+            ],
+            Weapons =
+            [new()
+                {
+                    Name = "W1", Damage = 10, Range = 10, FireRate = 1,
+                    Damages = [new DamageQuantity() { DamageType = DamageType.Kinetic, Quantity = 10, },],
+                },
+            ],
+        };
+        //instead of this type of flow, I should have a ShipManager class that handles all 
+        Ships.Add(new() { Ship = ship, });
+
+        var ship2 = new Ship
+        {
+            Name = "XX",
+            StorageCapacity = 100,
+            Location = new Vector3(0, 0, 0),
+            Inventory =
+            [
+                new(){Ware = Ware.Steel, Quantity = 10, },
+                new(){Ware = Ware.HullParts, Quantity = 05, },
+            ],
+            Weapons =
+            [new()
+                {
+                    Name = "VVV", Damage = 10, Range = 10, FireRate = 1,
+                    Damages = [new DamageQuantity() { DamageType = DamageType.Kinetic, Quantity = 10, },],
+                },
+            ],
+        };
+        //instead of this type of flow, I should have a ShipManager class that handles all 
+        Ships.Add(new() { Ship = ship2, });
+    }
+
+    [RelayCommand]
+    public void DoubleClickDataGridRow()
+    {
+        if (SelectedShip != null)
+        {
+            SelectedShip.ShowInventory = !SelectedShip.ShowInventory;
+        }
     }
 
     public void MoveShipToStation(Ship ship, Station station)
@@ -133,7 +169,7 @@ public partial class MainWindowViewModel : ObservableObject
 public partial class ShipViewModel : ObservableObject
 {
     [ObservableProperty] private Ship _ship;
-
+    [ObservableProperty] private bool _showInventory;
 }
 
 

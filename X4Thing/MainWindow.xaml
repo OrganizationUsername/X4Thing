@@ -17,20 +17,37 @@
 
         <TextBlock Text="{Binding Title}" Grid.Row="0" />
 
-        <DataGrid ItemsSource="{Binding Ships}" AutoGenerateColumns="False" Grid.Row="1" CanUserAddRows="False" 
-                  RowDetailsVisibilityMode="Visible">
-            <!--behaviors:DataGridRowBehavior.RowDoubleClickCommand="{Binding ShipDetailsCommand}"-->
+        <DataGrid ItemsSource="{Binding Ships}" AutoGenerateColumns="False" Grid.Row="1" CanUserAddRows="False" RowDetailsVisibilityMode="Visible"  SelectedItem="{Binding SelectedShip}" >
+            <!--ref: https://stackoverflow.com/questions/3876662/wpf-datagrid-commandbinding-to-a-double-click-instead-of-using-events-->
+            <DataGrid.InputBindings>
+                <MouseBinding
+                    MouseAction="LeftDoubleClick"
+                    Command="{Binding DoubleClickDataGridRowCommand}"/>
+                <!--DoubleClickDataGridRowCommand toggles the ships' visibility based on the viewmodel's boolean.-->
+            </DataGrid.InputBindings>
             <DataGrid.Columns>
-                <DataGridTextColumn Header="Name" Binding="{Binding Ship.Name}" />
-                <DataGridTextColumn Header="Storage Capacity" Binding="{Binding Ship.StorageCapacity}" />
-                <DataGridTextColumn Header="Location" Binding="{Binding Ship.Location}" />
+                <!--if they want to change the name, it should be done elsewhere.-->
+                <DataGridTextColumn Header="Name" Binding="{Binding Ship.Name}" IsReadOnly="True" />
+                <DataGridTextColumn Header="Storage Capacity" Binding="{Binding Ship.StorageCapacity}" IsReadOnly="True" />
+                <DataGridTextColumn Header="Location" Binding="{Binding Ship.Location}" IsReadOnly="True" />
+                <!--<DataGridTextColumn Header="ShowInventory" Binding="{Binding ShowInventory}" IsReadOnly="True" />-->
             </DataGrid.Columns>
             <DataGrid.RowDetailsTemplate>
                 <DataTemplate>
                     <DataGrid ItemsSource="{Binding Ship.Inventory}" AutoGenerateColumns="False" CanUserAddRows="False">
+                        <DataGrid.Style>
+                            <Style TargetType="DataGrid">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding ShowInventory}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </DataGrid.Style>
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="Ware Name" Binding="{Binding Ware.Name}" />
-                            <DataGridTextColumn Header="Quantity" Binding="{Binding Quantity}" />
+                            <DataGridTextColumn Header="Ware Name" Binding="{Binding Ware.Name}" IsReadOnly="True" />
+                            <DataGridTextColumn Header="Quantity" Binding="{Binding Quantity}" IsReadOnly="True" />
                         </DataGrid.Columns>
                     </DataGrid>
                 </DataTemplate>
