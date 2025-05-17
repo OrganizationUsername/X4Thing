@@ -22,7 +22,6 @@ public class TransportReceivedLog(int tick, int facilityId, string resourceId, i
     public string Format() => $"[Tick {Tick:D4}] Received {Amount} of {ResourceId} from {From.Name} at {Position}";
 }
 
-
 public class ProductionCompletedLog(int tick, int facilityId, string resourceId, int amount, Vector2 position) : ILogLine, IProductionFacilityLog
 {
     public int Tick { get; } = tick;
@@ -53,7 +52,6 @@ public class WorkshopAddedLog(int tick, int facilityId, string resourceId, int a
     public string Format() => $"[Tick {Tick:D4}] Added {Amount} workshop(s) for {ResourceId} at {Position}";
 }
 
-
 public class TransportAssignedLog(int tick, int transporterId, string resourceId, int amount, ProductionFacility from, ProductionFacility to) : ILogLine, ITransporterLog
 {
     public int Tick { get; } = tick;
@@ -62,7 +60,6 @@ public class TransportAssignedLog(int tick, int transporterId, string resourceId
     public int Amount { get; } = amount;
     public ProductionFacility From { get; } = from;
     public ProductionFacility To { get; } = to;
-
     public string Format() => $"[Tick {Tick:D4}] Transporter {TransporterId} assigned to deliver {Amount} x {ResourceId} from {From.Name}({From.Position}) to {To.Name}({To.Position})";
 }
 
@@ -72,7 +69,6 @@ public class PickupLog(int tick, int transporterId, List<ResourceAmount> pickedU
     public int TransporterId { get; } = transporterId;
     public List<ResourceAmount> PickedUp { get; } = pickedUp;
     public ProductionFacility? Facility { get; } = pf;
-
     public string Format() => $"[Tick {Tick:D4}] Transporter {TransporterId} picked up: {string.Join(", ", PickedUp)} from {Facility?.Name ?? "Unknown"}";
 }
 
@@ -95,7 +91,6 @@ public class DeliveryPartialLog(int tick, int transporterId, List<ResourceAmount
     public string Format() => $"[Tick {Tick:D4}] Transporter {TransporterId} partially delivered: {string.Join(", ", Partial)} to {Facility.Name}";
 }
 
-
 public class DeliveryFailedLog(int tick, int transporterId, List<ResourceAmount> failed, ProductionFacility pf) : ILogLine, ITransporterLog
 {
     public int Tick { get; } = tick;
@@ -111,6 +106,5 @@ public class DeliveryLog(int tick, int transporterId, Vector2 destination, List<
     public int TransporterId { get; } = transporterId;
     public Vector2 Destination { get; } = destination;
     public List<ResourceAmount> Delivered { get; } = delivered;
-
     public string Format() => $"[Tick {Tick:D4}] Transporter {TransporterId} delivered to {Destination}: {string.Join(", ", Delivered)}";
 }

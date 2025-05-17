@@ -509,7 +509,7 @@ public class TransporterTests
         ticker.RunTicks(40);
 
         var logs = gameData.GetAllLogs();
-        var formattedText = gameData.GetAllLogsFormatted();
+        //var formattedText = gameData.GetAllLogsFormatted();
         /*
            [Tick 0000] Transporter 0 assigned to deliver 2 x metal_bar from Destination(<5, 0>) to Destination(<5, 0>)
            [Tick 0000] Transporter 0 assigned to deliver 2 x metal_bar from Destination(<5, 0>) to Destination(<5, 0>)
@@ -852,4 +852,108 @@ public class TransporterTests
         Assert.Equal(5, transporter.DistanceTraveled, 0.1f);
         //Assert.True(transporter.HasActiveTask(), "Transporter should still have an active task.");
     }
+
+    [Fact]
+    public void ResourceStorage_TracksIncomingCorrectly_DuringSlowTransport_ManualAssignment()
+    {
+        var gameData = GameData.GetDefault();
+        var ore = gameData.GetResource("ore");
+
+        // --- Source
+        var sourceStorage = new ResourceStorage();
+        sourceStorage.Add(ore, 100);
+        var source = new ProductionFacility(sourceStorage, []) { Name = "Source", Position = new Vector2(0, 0), };
+
+        // --- Destination (empty at start)
+        var destStorage = new ResourceStorage();
+        var dest = new ProductionFacility(destStorage, []) { Name = "Dest", Position = new Vector2(100, 0), };
+
+        // --- Transporter (speed = 1 → 100 ticks to travel 100 units)
+        var transporter = new Transporter { Id = 1, Position = new Vector2(0, 0), SpeedPerTick = 1f, MaxVolume = 100f, };
+
+        // --- Setup system
+        var ticker = new Ticker { GameData = gameData, };
+        gameData.Facilities.Add(source);
+        gameData.Facilities.Add(dest);
+        gameData.Transporters.Add(transporter);
+        ticker.Register(source);
+        ticker.Register(dest);
+        ticker.Register(transporter);
+
+        // --- Assign transport of 10 ore
+        transporter.AssignTask(source, dest, [new ResourceAmount(ore, 10),], currentTick: 0); //This is a bit more manual than I'd like
+
+        // --- Run for 50 ticks (halfway)
+        ticker.RunTicks(50);
+
+        // --- Assert storage states
+        Assert.Equal(90, sourceStorage.GetAmount(ore)); // ore removed
+        Assert.Equal(0, destStorage.GetAmount(ore)); // not delivered yet
+        Assert.Equal(10, destStorage.GetIncomingAmount(ore)); // ore is on the way
+        Assert.Equal(10, destStorage.GetTotalIncludingIncoming(ore)); // correct combined view
+
+        ticker.RunTicks(55);
+
+        Assert.Equal(10, destStorage.GetAmount(ore));
+        Assert.Equal(0, destStorage.GetIncomingAmount(ore));
+        Assert.Equal(10, destStorage.GetTotalIncludingIncoming(ore));
+    }
+
+    [Fact]
+    public void ResourceStorage_TracksIncomingCorrectly_DuringSlowTransport_AutoAssigned()
+    {
+        var gameData = GameData.GetDefault();
+        var ore = gameData.GetResource("ore");
+        var oreRecipe = gameData.GetRecipe("recipe_metal_bar");
+
+        // --- Source with ore and a dummy recipe just to be a valid facility
+        var sourceStorage = new ResourceStorage();
+        sourceStorage.Add(ore, 34);
+        var source = new ProductionFacility(sourceStorage, []) { Name = "Source", Position = new Vector2(0, 0), };
+
+        // --- Destination has no ore but asks for it via PullRequestStrategy
+        var destStorage = new ResourceStorage();
+        var dest = new ProductionFacility(destStorage, new() { { oreRecipe, 1 }, }) { Name = "Dest", Position = new Vector2(100, 0), PullRequestStrategy = new SustainedProductionStrategy(ticks: 1000), };// Will request ore
+        var transporter = new Transporter { Id = 1, Position = new Vector2(0, 0), SpeedPerTick = 1f, MaxVolume = 100f, }; // --- Transporter with just enough volume, slow movement
+
+        // --- Register all
+        var ticker = new Ticker { GameData = gameData, };
+        gameData.Facilities.Add(source);
+        gameData.Facilities.Add(dest);
+        gameData.Transporters.Add(transporter);
+        ticker.Register(source);
+        ticker.Register(dest);
+        ticker.Register(transporter);
+
+        // --- Simulate decision logic that assigns tasks based on demand/supply
+        ticker.RunTicks(50);
+
+        // --- Mid-delivery: should be in transit
+        Assert.Equal(01, sourceStorage.GetAmount(ore)); //FAIL this is 67 instead... why?
+        Assert.Equal(00, destStorage.GetAmount(ore));
+        Assert.Equal(33, destStorage.GetIncomingAmount(ore));
+        Assert.Equal(33, destStorage.GetTotalIncludingIncoming(ore));
+        Assert.Equal(33, transporter.Carrying.FirstOrDefault(r => r.Resource == ore)?.Amount ?? 0);
+
+        // --- Complete delivery
+        ticker.RunTicks(51);
+        //var debugText = gameData.GetAllLogsFormatted();
+        /*
+           [Tick 0001] Transporter 1 assigned to deliver 33 x ore from Source(<0, 0>) to Dest(<100, 0>)
+           [Tick 0001] Transporter 1 picked up: 33 x ore from Source
+           [Tick 0101] Received 33 of ore from Transporter at <100, 0>
+           [Tick 0101] Transporter 1 delivered to <100, 0>: 33 x ore
+           [Tick 0102] Transporter 1 assigned to deliver 1 x ore from Source(<0, 0>) to Dest(<100, 0>)         
+         */
+
+        Assert.Equal(33, destStorage.GetAmount(ore));
+        Assert.Equal(00, destStorage.GetIncomingAmount(ore));
+        Assert.Equal(33, destStorage.GetTotalIncludingIncoming(ore));
+
+        ticker.RunTicks(51);
+        Assert.Equal(33, destStorage.GetAmount(ore));
+        Assert.Equal(01, destStorage.GetIncomingAmount(ore));
+        Assert.Equal(34, destStorage.GetTotalIncludingIncoming(ore));
+    }
+
 }

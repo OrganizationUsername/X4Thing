@@ -165,16 +165,6 @@ public class ResourceStorage
     private readonly Dictionary<Resource, int> _incoming = new();
 
     public Dictionary<Resource, int> GetAll() => new(_resources);
-    public Dictionary<Resource, int> GetAllIncludingIncoming()
-    {
-        var all = new Dictionary<Resource, int>(_resources);
-        foreach (var (key, value) in _incoming)
-        {
-            all.TryAdd(key, 0);
-            all[key] += value;
-        }
-        return all;
-    }
 
     public void Add(Resource type, int amount)
     {

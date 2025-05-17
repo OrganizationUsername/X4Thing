@@ -199,5 +199,4 @@ public class GameData : IUpdatable
 
     public Resource GetResource(string id) => Resources[id];
     public Recipe GetRecipe(string id) => Recipes[id];
-
 }

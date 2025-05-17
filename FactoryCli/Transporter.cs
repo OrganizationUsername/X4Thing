@@ -10,7 +10,6 @@ public class Transporter : IUpdatable, IHasName
     public int Id { get; set; } = 0;
     public string Name { get; set; } = "Transporter";
     public float MaxVolume { get; set; } = 10f;
-    //ToDo: maybe make it so they have a bulk volume and a container volume, that way they can carry a bunch of asteroids but fewer finished/containerized goods
 
     public List<ILogLine> LogLines { get; } = [];
 
@@ -68,7 +67,7 @@ public class Transporter : IUpdatable, IHasName
         }
     }
 
-    private float _distanceTraveled = 0f;
+    private float _distanceTraveled;
     public float DistanceTraveled => _distanceTraveled;
 
     public void Tick(int tick)
