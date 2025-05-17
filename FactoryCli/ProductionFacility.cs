@@ -12,6 +12,7 @@ public class ProductionFacility : IUpdatable, IHasName
     public int Id { get; set; } = 0;
     public string Name { get; set; } = "Production";
     public List<string> DebugLog { get; } = []; //ToDo: Make another log that is `List<(int tick, string log)>` so I can sort it by tick and see what happened at a certain time. Maybe not `string log`, though. Maybe it's a structured type that's easier to query.
+    public List<ILogLine> LogLines { get; } = [];
 
     public Vector2 Position { get; set; } = new(0, 0);
 
@@ -28,15 +29,17 @@ public class ProductionFacility : IUpdatable, IHasName
         }
     }
 
-    public bool TryExport(Resource res, int amountToTake, int tick, IHasName receiver)
+    public bool TryExport(Resource res, int amountToTake, int tick, Transporter receiver)
     {
         DebugLog.Add($"[Tick {tick}] Exporting {amountToTake} of {res.Id} to {receiver.Name}");
+        //LogLines.Add(new TransportAssignedLog(tick, Id, res.Id, amountToTake, this, receiver));
         return _storage.Consume(res, amountToTake);
     }
 
-    public void ReceiveImport(Resource res, int amountToTransfer, int tick, IHasName giver)
+    public void ReceiveImport(Resource res, int amountToTransfer, int tick, Transporter transporter)
     {
-        DebugLog.Add($"[Tick {tick}] Received {amountToTransfer} of {res.Id} from {giver.Name}");
+        DebugLog.Add($"[Tick {tick}] Received {amountToTransfer} of {res.Id} from {transporter.Name}");
+        LogLines.Add(new TransportReceivedLog(tick, Id, res.Id, amountToTransfer, Position, transporter));
         _storage.Add(res, amountToTransfer);
     }
 
@@ -47,6 +50,7 @@ public class ProductionFacility : IUpdatable, IHasName
         if (!_workshops.TryAdd(recipe, count)) { _workshops[recipe] += count; }
         if (!_activeJobs.ContainsKey(recipe)) { _activeJobs[recipe] = []; }
         DebugLog.Add($"  Added {count} workshop(s) for {recipe.Output.Id}");
+        LogLines.Add(new WorkshopAddedLog(0, Id, recipe.Output.Id, count, Position));
     }
 
     public void Tick(int currentTick)
@@ -70,6 +74,7 @@ public class ProductionFacility : IUpdatable, IHasName
                     _storage.Add(output, recipe.OutputAmount);
                     jobs.RemoveAt(i);
                     tempLog.Add($"  Completed job for {output.Id}, output added to storage");
+                    LogLines.Add(new ProductionCompletedLog(currentTick, Id, output.Id, recipe.OutputAmount, Position));
                 }
             }
 
@@ -82,6 +87,7 @@ public class ProductionFacility : IUpdatable, IHasName
                     ConsumeInputs(recipe.Inputs);
                     jobs.Add(new ProductionJob());
                     tempLog.Add($"  Started job for {output.Id} (duration: {recipe.Duration})");
+                    LogLines.Add(new ProductionStartedLog(currentTick, Id, output.Id, recipe.Duration, Position));
                 }
                 else { break; }
             }

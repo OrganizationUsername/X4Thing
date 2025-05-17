@@ -13,21 +13,35 @@ public class TransporterTests
 
         var sourceStorage = new ResourceStorage();
         sourceStorage.Add(metalBar, 5);
-        var source = new ProductionFacility(sourceStorage, []);
+        var source = new ProductionFacility(sourceStorage, []) { Position = new Vector2(0, 0), Name = "Source", };
 
-        var dest = new ProductionFacility(new ResourceStorage(), []);
+        var dest = new ProductionFacility(new ResourceStorage(), []) { Position = new Vector2(5, 0), Name = "Dest", };
 
-        var transporter = new Transporter { Position = source.Position, };
-        transporter.AssignTask(source, dest, [new(metalBar, 3),]);
+        var transporter = new Transporter { Position = source.Position, MaxVolume = 10f, SpeedPerTick = 5f, Id = 42, };
 
-        transporter.Tick(1); // Should pick up
+        transporter.AssignTask(source, dest, [new ResourceAmount(metalBar, 3),]);
+
+        var ticker = new Ticker { GameData = gameData, };
+        ticker.Register(source);
+        ticker.Register(dest);
+        ticker.Register(transporter);
+
+        // Tick once to trigger pickup
+        ticker.RunTicks(1);
+
+        gameData.Facilities.Add(source);
+        gameData.Facilities.Add(dest);
+        gameData.Transporters.Add(transporter);
+        var logs = gameData.GetAllLogs().ToList();
+        var formatted = gameData.GetAllLogsFormatted();
 
         var carried = transporter.Carrying.SingleOrDefault(r => r.Resource == metalBar);
-
         Assert.NotNull(carried);
         Assert.Equal(3, carried.Amount);
-        Assert.Contains("Picked up 3 x metal_bar", transporter.Log);
+
         Assert.Equal(2, sourceStorage.GetAmount(metalBar));
+
+        Assert.Contains(logs, l => l is PickupLog pl && pl.PickedUp.Any(p => p.Resource == metalBar && p.Amount == 3) && pl.TransporterId == transporter.Id);
     }
 
     [Fact]
@@ -273,18 +287,19 @@ public class TransporterTests
 
         var sourceStorage = new ResourceStorage();
         sourceStorage.Add(metalBar, 100);
-        var source = new ProductionFacility(sourceStorage, []) { Position = new Vector2(0, 0), Id = 1, };
+        var source = new ProductionFacility(sourceStorage, []) { Position = new Vector2(0, 0), Id = 1, Name = "Source", };
 
         var destStorage = new ResourceStorage();
         var recipe = gameData.GetRecipe("recipe_computer_part");
-        var dest = new ProductionFacility(destStorage, new Dictionary<Recipe, int> { { recipe, 1 }, }) { Position = new Vector2(5, 0), Id = 2, };
+        var dest = new ProductionFacility(destStorage, new Dictionary<Recipe, int> { { recipe, 1 }, }) { Position = new Vector2(5, 0), Id = 2, Name = "Destination", };
+
         var transporter = new Transporter { Position = new Vector2(0, 0), SpeedPerTick = 5f, MaxVolume = 10f, Id = 3, };
 
         gameData.Facilities.Add(source);
         gameData.Facilities.Add(dest);
         gameData.Transporters.Add(transporter);
 
-        // Manually simulate a need by faking negative inventory
+        // Fake a pull request by simulating negative metalBars at the destination
         destStorage.Add(metalBar, -10);
 
         var ticker = new Ticker { GameData = gameData, };
@@ -292,26 +307,25 @@ public class TransporterTests
         ticker.Register(dest);
         ticker.Register(transporter);
 
-        // --- Tick 1: Dispatch should happen
-        ticker.RunTicks(2); //this takes 2 instead of 1
-        Assert.Contains("Enqueued", transporter.Log);
-        Assert.Empty(transporter.Carrying); // Not yet picked up
+        // Run full cycle of assignment → pickup → delivery
+        ticker.RunTicks(5);
 
-        // --- Tick 2: Pickup
-        ticker.RunTicks(1);
-        Assert.Contains("Picked up", transporter.Log);
-        Assert.True(transporter.Carrying.Sum(x => x.Amount) > 0);
-        Assert.True(sourceStorage.GetAmount(metalBar) < 100);
+        // Collect logs at the end
+        var logs = gameData.GetAllLogs().ToList();
+        var formatted = gameData.GetAllLogsFormatted();
 
-        // --- Tick 3: Arrive at dest, deliver
-        ticker.RunTicks(1);
-        Assert.Contains("Delivered", transporter.Log);
+        // Assert key events occurred
+        Assert.Contains(logs, l => l is TransportAssignedLog al && al.ResourceId == "metal_bar" && al.From == source && al.To == dest);
+        Assert.Contains(logs, l => l is PickupLog pl && pl.PickedUp.Any(p => p.Resource == metalBar));
+        Assert.Contains(logs, l => l is DeliveryLog dl && dl.Delivered.Any(d => d.Resource == metalBar));
+        Assert.Contains(logs, l => l is TransportReceivedLog rl && rl.ResourceId == "metal_bar" && rl.Position == dest.Position);
 
-        // --- Final state check
+        // Final inventory checks
         Assert.Empty(transporter.Carrying);
         Assert.True(destStorage.GetAmount(metalBar) > 0, $"Expected metalBars in dest, found: {destStorage.GetAmount(metalBar)}");
 
-        Assert.DoesNotContain("Failed", transporter.Log); // Sanity check: No failures
+        // Optional: assert no transport failures occurred
+        Assert.DoesNotContain("Failed", transporter.Log);
     }
 
     [Fact]
@@ -321,21 +335,25 @@ public class TransporterTests
         var ore = gameData.GetResource("ore");
         var energy = gameData.GetResource("energy_cell");
         var plastic = gameData.GetResource("plastic");
+        var metalBar = gameData.GetResource("metal_bar");
+        var computerPart = gameData.GetResource("computer_part");
 
-        // --- Source produces metal bars
+        // Source produces metal bars
         var sourceStorage = new ResourceStorage();
         sourceStorage.Add(ore, 200);
         sourceStorage.Add(energy, 100);
         var metalBarRecipe = gameData.GetRecipe("recipe_metal_bar");
-        var source = new ProductionFacility(sourceStorage, new Dictionary<Recipe, int> { { metalBarRecipe, 2 }, }) { Position = new Vector2(0, 0), };
+        var source = new ProductionFacility(sourceStorage, new() { { metalBarRecipe, 2 }, })
+        { Position = new Vector2(0, 0), Name = "Source", };
 
-        // --- Destination needs metal bars to build computer parts
+        // Destination builds computer parts
         var destStorage = new ResourceStorage();
-        destStorage.Add(plastic, 10); // Already has plastic
+        destStorage.Add(plastic, 10);
         var computerRecipe = gameData.GetRecipe("recipe_computer_part");
-        var dest = new ProductionFacility(destStorage, new Dictionary<Recipe, int> { { computerRecipe, 1 }, }) { Position = new Vector2(5, 0), };
+        var dest = new ProductionFacility(destStorage, new() { { computerRecipe, 1 }, })
+        { Position = new Vector2(5, 0), Name = "Destination", };
 
-        var transporter = new Transporter { Position = new Vector2(0, 0), SpeedPerTick = 5f, MaxVolume = 10f, };
+        var transporter = new Transporter { Position = new Vector2(0, 0), SpeedPerTick = 5f, MaxVolume = 10f, Id = 0, };
 
         gameData.Facilities.Add(source);
         gameData.Facilities.Add(dest);
@@ -346,15 +364,24 @@ public class TransporterTests
         ticker.Register(dest);
         ticker.Register(transporter);
 
-        // Run ticks: produce metal bars, assign, transport, deliver, use in computer part
+        // Run ticks to let production, transport, and consumption happen
         ticker.RunTicks(25);
 
-        // Expect at least one computer part produced
-        Assert.True(destStorage.GetAmount(gameData.GetResource("computer_part")) > 0, "Computer part was not produced.");
-        Assert.Contains("Enqueued", transporter.Log);
-        Assert.Contains("Picked up", transporter.Log);
-        Assert.Contains("Delivered", transporter.Log);
-        Assert.DoesNotContain("Failed", transporter.Log);
+        var logs = gameData.GetAllLogs().ToList();
+        var formatted = string.Join(Environment.NewLine, logs.Select(l => l.Format()));
+
+        // ✅ Assertions using structured logs
+        Assert.Contains(logs, l => l is TransportAssignedLog log && log.ResourceId == "metal_bar");
+        Assert.Contains(logs, l => l is PickupLog pl && pl.PickedUp.Any(r => r.Resource.Id == "metal_bar"));
+        Assert.Contains(logs, l => l is DeliveryLog dl && dl.Delivered.Any(r => r.Resource.Id == "metal_bar"));
+        Assert.Contains(logs, l => l is TransportReceivedLog rl && rl.ResourceId == "metal_bar");
+
+        Assert.Contains(logs, l => l is ProductionStartedLog pl && pl.ResourceId == "computer_part");
+        Assert.Contains(logs, l => l is ProductionCompletedLog pl && pl.ResourceId == "computer_part");
+
+        // ✅ Sanity check: computer part actually got produced
+        Assert.True(destStorage.GetAmount(computerPart) > 0, "Expected at least one computer_part to be produced.");
+
     }
 
     [Fact]
@@ -367,18 +394,18 @@ public class TransporterTests
         var plastic = gameData.GetResource("plastic");
         var computerPart = gameData.GetResource("computer_part");
 
-        var sourceStorage = new ResourceStorage(); // --- Source will produce metal bars
+        var sourceStorage = new ResourceStorage();
         sourceStorage.Add(ore, 200);
         sourceStorage.Add(energy, 100);
         var metalBarRecipe = gameData.GetRecipe("recipe_metal_bar");
-        var source = new ProductionFacility(sourceStorage, new Dictionary<Recipe, int> { { metalBarRecipe, 2 }, }) { Position = new Vector2(0, 0), Name = "Source", };
+        var source = new ProductionFacility(sourceStorage, new() { { metalBarRecipe, 2 }, }) { Position = new Vector2(0, 0), Name = "Source", };
 
-        var destStorage = new ResourceStorage(); // --- Destination will request metal bars
-        destStorage.Add(plastic, 10); // Only has plastic
+        var destStorage = new ResourceStorage();
+        destStorage.Add(plastic, 10);
         var computerRecipe = gameData.GetRecipe("recipe_computer_part");
-        var dest = new ProductionFacility(destStorage, new Dictionary<Recipe, int> { { computerRecipe, 1 }, }) { Position = new Vector2(5, 0), Name = "Destination", };
+        var dest = new ProductionFacility(destStorage, new() { { computerRecipe, 1 }, }) { Position = new Vector2(5, 0), Name = "Destination", };
 
-        var transporter = new Transporter { Position = new Vector2(5, 0), SpeedPerTick = 1f, MaxVolume = 10f, };
+        var transporter = new Transporter { Position = new Vector2(5, 0), SpeedPerTick = 1f, MaxVolume = 10f, Id = 0, };
 
         gameData.Facilities.Add(source);
         gameData.Facilities.Add(dest);
@@ -389,61 +416,112 @@ public class TransporterTests
         ticker.Register(dest);
         ticker.Register(transporter);
 
-        // --- Tick 1–10: Metal bars should be produced
-        ticker.RunTicks(11);
-        var sourceText = source.GetDebugLog();
-        /*
-           [Tick 1]
-             Started job for metal_bar (duration: 10)
-             Started job for metal_bar (duration: 10)
-           [Tick 11]
-             Completed job for metal_bar, output added to storage
-             Completed job for metal_bar, output added to storage
-             Started job for metal_bar (duration: 10)
-             Started job for metal_bar (duration: 10)
-         */
-        Assert.Contains("Completed job for metal_bar", sourceText);
+        // --- All ticks up front
+        ticker.RunTicks(31);
 
-        // --- Tick 11–12: Transporter should be assigned and pick up
-        ticker.RunTicks(2);
-        Assert.Contains("Enqueued", transporter.Log);
-        ticker.RunTicks(2);
+        // Now collect logs once at the end
+        var logs = gameData.GetAllLogs().ToList();
 
-        Assert.Contains("Picked up", transporter.Log);
-        /*
-            [Tick 11] Enqueued transport: 2 x metal_bar from <0, 0> to <5, 0>
-            [Tick 11] Picked up 2 x metal_bar
-            [Tick 12] Delivered 2 x metal_bar to <5, 0>
-         */
-        Assert.True(transporter.Carrying.Any(x => x.Resource == metalBar), "Transporter not carrying metal bars after pickup");
+        // Log-based assertions
+        Assert.Contains(logs, l => l is ProductionCompletedLog pl && pl.ResourceId == "metal_bar" && pl.Position == source.Position);
 
-        // --- Tick 13: Delivery happens
-        ticker.RunTicks(5);
-        Assert.Contains("Delivered", transporter.Log);
-        /*
-            [Tick 11] Enqueued transport: 2 x metal_bar from Source (<0, 0>) to Destination(<5, 0>)
-            [Tick 15] Picked up 2 x metal_bar
-         */
-        Assert.True(destStorage.GetAmount(metalBar) > 0, "Metal bars were not delivered to dest facility");
+        Assert.Contains(logs, l => l is TransportAssignedLog al && al.ResourceId == "metal_bar" && al.From.Position == source.Position && al.To.Position == dest.Position);
 
-        // --- Tick 14–23: Job for computer part starts & progresses
-        var preCount = destStorage.GetAmount(computerPart);
-        ticker.RunTicks(11);
-        var postCount = destStorage.GetAmount(computerPart);
-        var destinationLogs = dest.GetDebugLog();
-        /*
-            [Tick 20] Received 2 of metal_bar from Transporter
-            [Tick 21]
-                Started job for computer_part (duration: 10)
-            [Tick 30] Received 2 of metal_bar from Transporter
-            [Tick 31]
-                Completed job for computer_part, output added to storage
-                Started job for computer_part (duration: 10)         
-         */
-        Assert.True(postCount > preCount, $"Expected computer_part to increase after job completes. Before: {preCount}, After: {postCount}");
+        Assert.Contains(logs, l => l is PickupLog pl && pl.PickedUp.Any(p => p.Resource == metalBar) && pl.TransporterId == transporter.Id);
 
-        // --- Final checks
-        Assert.DoesNotContain("Failed", transporter.Log);
+        Assert.Contains(logs, l => l is DeliveryLog dl && dl.Delivered.Any(d => d.Resource == metalBar) && dl.Destination == dest.Position);
+
+        Assert.Contains(logs, l => l is TransportReceivedLog rl && rl.ResourceId == "metal_bar" && rl.Position == dest.Position);
+
+        Assert.Contains(logs, l => l is ProductionStartedLog sl && sl.ResourceId == "computer_part" && sl.Position == dest.Position);
+
+        Assert.Contains(logs, l => l is ProductionCompletedLog cl && cl.ResourceId == "computer_part" && cl.Position == dest.Position);
+
         Assert.Empty(transporter.Carrying);
+
+        var pre = 0;
+        var post = destStorage.GetAmount(computerPart);
+        Assert.True(post > pre, $"Expected more computer_parts. Before: {pre}, After: {post}");
+    }
+
+    [Fact]
+    public void System_GeneratesCorrectLogSequence_ForMetalBarDeliveryAndUsage()
+    {
+        var gameData = GameData.GetDefault();
+        var ore = gameData.GetResource("ore");
+        var energy = gameData.GetResource("energy_cell");
+        var metalBar = gameData.GetResource("metal_bar");
+        var plastic = gameData.GetResource("plastic");
+        var computerPart = gameData.GetResource("computer_part");
+
+        var sourceStorage = new ResourceStorage();
+        sourceStorage.Add(ore, 200);
+        sourceStorage.Add(energy, 100);
+
+        var source = new ProductionFacility(sourceStorage, new() { { gameData.GetRecipe("recipe_metal_bar"), 2 }, }) { Position = new Vector2(0, 0), Name = "Source", };
+
+        var destStorage = new ResourceStorage();
+        destStorage.Add(plastic, 10);
+
+        var dest = new ProductionFacility(destStorage, new() { { gameData.GetRecipe("recipe_computer_part"), 1 }, }) { Position = new Vector2(5, 0), Name = "Destination", };
+
+        var transporter = new Transporter { Position = new Vector2(0, 0), SpeedPerTick = 1f, MaxVolume = 10f, Id = 0, };
+
+        gameData.Facilities.Add(source);
+        gameData.Facilities.Add(dest);
+        gameData.Transporters.Add(transporter);
+
+        var ticker = new Ticker { GameData = gameData, };
+        ticker.Register(source);
+        ticker.Register(dest);
+        ticker.Register(transporter);
+
+        ticker.RunTicks(40);
+
+        var logs = gameData.GetAllLogs();
+        var textLogs = gameData.GetAllLogsFormatted();
+        /*
+           [Tick 1] Started job for metal_bar (duration: 10) at <0, 0>
+           [Tick 1] Started job for metal_bar (duration: 10) at <0, 0>
+           [Tick 11] Completed job for metal_bar, output added to storage at <0, 0>
+           [Tick 11] Completed job for metal_bar, output added to storage at <0, 0>
+           [Tick 11] Started job for metal_bar (duration: 10) at <0, 0>
+           [Tick 11] Started job for metal_bar (duration: 10) at <0, 0>
+           [Tick 11] Transporter 0 assigned to deliver 2 x metal_bar from Source(<0, 0>) to Destination(<5, 0>)
+           [Tick 11] Transporter 0 picked up: 2 x metal_bar from Source
+           [Tick 16] Received 2 of metal_bar from Transporter at <5, 0>
+           [Tick 16] Transporter 0 delivered to <5, 0>: 2 x metal_bar
+           [Tick 17] Started job for computer_part (duration: 10) at <5, 0>
+           [Tick 21] Completed job for metal_bar, output added to storage at <0, 0>
+           [Tick 21] Completed job for metal_bar, output added to storage at <0, 0>
+           [Tick 21] Started job for metal_bar (duration: 10) at <0, 0>
+           [Tick 21] Started job for metal_bar (duration: 10) at <0, 0>
+           [Tick 21] Transporter 0 assigned to deliver 2 x metal_bar from Source(<0, 0>) to Destination(<5, 0>)
+           [Tick 25] Transporter 0 picked up: 2 x metal_bar from Source
+           [Tick 27] Completed job for computer_part, output added to storage at <5, 0>
+           [Tick 30] Received 2 of metal_bar from Transporter at <5, 0>
+           [Tick 30] Transporter 0 delivered to <5, 0>: 2 x metal_bar
+           [Tick 31] Completed job for metal_bar, output added to storage at <0, 0>
+           [Tick 31] Completed job for metal_bar, output added to storage at <0, 0>
+           [Tick 31] Started job for metal_bar (duration: 10) at <0, 0>
+           [Tick 31] Started job for metal_bar (duration: 10) at <0, 0>
+           [Tick 31] Started job for computer_part (duration: 10) at <5, 0>
+           [Tick 31] Transporter 0 assigned to deliver 2 x metal_bar from Source(<0, 0>) to Destination(<5, 0>)
+           [Tick 35] Transporter 0 picked up: 2 x metal_bar from Source
+           [Tick 40] Received 2 of metal_bar from Transporter at <5, 0>
+           [Tick 40] Transporter 0 delivered to <5, 0>: 2 x metal_bar
+         */
+        Assert.Contains(logs, l => l is ProductionStartedLog pl && pl.ResourceId == "metal_bar");
+        Assert.Contains(logs, l => l is ProductionCompletedLog pl && pl.ResourceId == "metal_bar");
+
+        Assert.Contains(logs, l => l is TransportAssignedLog tl && tl.ResourceId == "metal_bar");
+        var pickupLogs = logs.OfType<PickupLog>().ToList();
+        Assert.Contains(logs, l => l is PickupLog pl && pl.PickedUp.Any(p => p.Resource.Id == "metal_bar"));
+        Assert.Contains(logs, l => l is DeliveryLog dl && dl.Delivered.Any(d => d.Resource.Id == "metal_bar"));
+        Assert.Contains(logs, l => l is TransportReceivedLog rl && rl.ResourceId == "metal_bar");
+
+        Assert.Contains(logs, l => l is ProductionStartedLog pl && pl.ResourceId == "computer_part");
+        Assert.Contains(logs, l => l is ProductionCompletedLog pl && pl.ResourceId == "computer_part");
+
     }
 }

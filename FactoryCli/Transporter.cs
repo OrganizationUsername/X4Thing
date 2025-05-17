@@ -2,9 +2,6 @@
 
 namespace FactoryCli;
 
-
-
-
 public class Transporter : IUpdatable, IHasName
 {
     public Vector2 Position { get; set; }
@@ -15,6 +12,8 @@ public class Transporter : IUpdatable, IHasName
     public string Name { get; set; } = "Transporter";
     public float MaxVolume { get; set; } = 10f;
     //ToDo: maybe make it so they have a bulk volume and a container volume, that way they can carry a bunch of asteroids but fewer finished/containerized goods
+
+    public List<ILogLine> LogLines { get; } = [];
 
     public List<ResourceAmount> Carrying { get; } = [];
 
@@ -29,6 +28,7 @@ public class Transporter : IUpdatable, IHasName
         var task = new TransportTask(from, to, cargo);
         _taskQueue.Enqueue(task);
         Log += $"{(currentTick is not null ? $"[Tick {currentTick}] " : "")}Enqueued transport: {string.Join(", ", cargo)} from {from.Name} ({from.Position}) to {to.Name}({to.Position})\n";
+        LogLines.Add(new TransportAssignedLog(currentTick ?? 0, Id, cargo.First().Resource.Id, cargo.Sum(x => x.Amount), from, to));
     }
 
     public void Tick(int tick)
@@ -75,13 +75,16 @@ public class Transporter : IUpdatable, IHasName
                     var existing = Carrying.FirstOrDefault(x => x.Resource == item.Resource);
                     if (existing != null) { existing.Amount += amountToTake; }
                     else { Carrying.Add(new ResourceAmount(item.Resource, amountToTake)); }
-
                     remainingVolume -= amountToTake * volumePerUnit;
-                }
-                else { Log += $"[Tick {tick}] Failed to pick up {item.Amount} x {item.Resource.Id}\n"; }
-            }
 
-            Log += $"[Tick {tick}] Picked up {string.Join(", ", Carrying)}\n";
+                    LogLines.Add(new PickupLog(tick, Id, [new ResourceAmount(item.Resource, amountToTake),], _currentTask.Source));
+                }
+                else
+                {
+                    Log += $"[Tick {tick}] Failed to pick up {item.Amount} x {item.Resource.Id}\n";
+                    LogLines.Add(new TransportAssignedLog(tick, Id, item.Resource.Id, item.Amount, task.Source, task.Destination));
+                }
+            }
             task.HasPickedUp = true;
             _target = task.Destination.Position;
         }
@@ -94,6 +97,7 @@ public class Transporter : IUpdatable, IHasName
                 if (item.Amount < amountToTransfer) { amountToTransfer = item.Amount; }
                 task.Destination.ReceiveImport(item.Resource, amountToTransfer.Value, tick, this);
                 Log += $"[Tick {tick}] Delivered {item.Amount} x {item.Resource.Id} to {task.Destination.Position}\n";
+                LogLines.Add(new DeliveryLog(tick, Id, task.Destination.Position, [new(item.Resource, amountToTransfer.Value),]));
                 item.Amount -= amountToTransfer.Value;
             }
             Carrying.RemoveAll(item => item.Amount == 0);

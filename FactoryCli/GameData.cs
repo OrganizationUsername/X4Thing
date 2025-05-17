@@ -26,6 +26,16 @@ public class GameData : IUpdatable
         return gameData;
     }
 
+    public List<ILogLine> GetAllLogs()
+    {
+        var allLogs = new List<ILogLine>();
+        foreach (var facility in Facilities) { allLogs.AddRange(facility.LogLines); }
+        foreach (var transporter in Transporters) { allLogs.AddRange(transporter.LogLines); }
+        return [.. allLogs.OrderBy(l => l.Tick),];
+    }
+
+    public string GetAllLogsFormatted() => string.Join(Environment.NewLine, GetAllLogs().Select(l => l.Format()));
+
     public void Tick(int currentTick)
     {
         AssignTransportersToBestTrades(currentTick);
