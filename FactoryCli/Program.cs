@@ -33,90 +33,17 @@ public class Recipe
     public int Duration { get; init; }
 }
 
-public class GameData
-{
-    public Dictionary<string, Resource> Resources { get; } = new();
-    public Dictionary<string, Recipe> Recipes { get; } = new();
-
-    public GameData()
-    {
-        InitializeResources();
-        InitializeRecipes();
-    }
-
-    private void InitializeResources()
-    {
-        AddResource(new Resource { Id = "ore", DisplayName = "Ore", BaseValue = 1 });
-        AddResource(new Resource { Id = "energy_cell", DisplayName = "Energy Cell", BaseValue = 2 });
-        AddResource(new Resource { Id = "metal_bar", DisplayName = "Metal Bar", BaseValue = 5 });
-        AddResource(new Resource { Id = "wheat", DisplayName = "Wheat", BaseValue = 1 });
-        AddResource(new Resource { Id = "flour", DisplayName = "Flour", BaseValue = 1.5f });
-        AddResource(new Resource { Id = "bread", DisplayName = "Bread", BaseValue = 3 });
-        AddResource(new Resource { Id = "plastic", DisplayName = "Plastic", BaseValue = 2 });
-        AddResource(new Resource { Id = "computer_part", DisplayName = "Computer Part", BaseValue = 20 });
-    }
-
-    private void InitializeRecipes()
-    {
-        var ore = GetResource("ore");
-        var energyCell = GetResource("energy_cell");
-        var metalBar = GetResource("metal_bar");
-        var wheat = GetResource("wheat");
-        var flour = GetResource("flour");
-        var bread = GetResource("bread");
-        var plastic = GetResource("plastic");
-        var computerPart = GetResource("computer_part");
-
-        AddRecipe(new Recipe
-        {
-            Id = "recipe_metal_bar",
-            Output = metalBar,
-            OutputAmount = 1,
-            Duration = 10,
-            Inputs = new Dictionary<Resource, int>
-            {
-                { ore, 2 },
-                { energyCell, 1 },
-            },
-        });
-
-        AddRecipe(new Recipe
-        {
-            Id = "recipe_bread",
-            Output = bread,
-            OutputAmount = 1,
-            Duration = 8,
-            Inputs = new Dictionary<Resource, int>
-            {
-                { wheat, 2 },
-                { flour, 1 },
-            },
-        });
-
-        AddRecipe(new Recipe
-        {
-            Id = "recipe_computer_part",
-            Output = computerPart,
-            OutputAmount = 1,
-            Duration = 10,
-            Inputs = new Dictionary<Resource, int>
-            {
-                { metalBar, 2 },
-                { plastic, 1 },
-            },
-        });
-    }
-
-    public void AddResource(Resource res) => Resources[res.Id] = res;
-    public void AddRecipe(Recipe rec) => Recipes[rec.Id] = rec;
-
-    public Resource GetResource(string id) => Resources[id];
-    public Recipe GetRecipe(string id) => Recipes[id];
-}
-
 public class ResourceStorage
 {
     private readonly Dictionary<Resource, int> _resources = new();
+
+    public IEnumerable<KeyValuePair<Resource, int>> DumpExcess()
+    {
+        foreach (var (res, amount) in _resources)
+        {
+            if (amount > 0) { yield return new KeyValuePair<Resource, int>(res, amount); }
+        }
+    }
 
     public void Add(Resource type, int amount)
     {
@@ -133,6 +60,70 @@ public class ResourceStorage
     }
 
     public int GetAmount(Resource type) => _resources.GetValueOrDefault(type, 0);
+}
+
+public class ResourceAmount(Resource resource, int amount)
+{
+    public Resource Resource { get; set; } = resource;
+    public int Amount { get; set; } = amount;
+
+    public override string ToString() => $"{Amount} x {Resource.Id}";
+}
+
+public class Transporter : IUpdatable
+{
+    public Vector2 Position { get; set; }
+    public float SpeedPerTick { get; set; } = 1f;
+    public string Log { get; private set; } = ""; //probably replace this with List<string>
+
+    public List<ResourceAmount> Carrying { get; } = [];
+
+    private (ProductionFacility Source, ProductionFacility Dest, List<ResourceAmount> Cargo)? _task; //This isn't good. I think it should be an actual queue instead.
+    private Vector2? _target;
+
+    public void AssignTask(ProductionFacility from, ProductionFacility to, List<ResourceAmount> cargo)
+    {
+        _task = (from, to, cargo);
+        Carrying.Clear();
+        _target = from.Position;
+
+        Log += $"Assigned to move {string.Join(", ", cargo)} from {from.Position} to {to.Position}\n";
+    }
+
+    public void Tick(int tick)
+    {
+        if (_task == null || _target == null) return;
+
+        var (from, to, cargo) = _task.Value;
+
+        var direction = _target.Value - Position;
+        var distance = direction.Length();
+
+        if (!(distance <= SpeedPerTick)) { Position += Vector2.Normalize(direction) * SpeedPerTick; return; }
+
+        Position = _target.Value;
+
+        if (Carrying.Count == 0) // Pickup. This isn't quite right. In the future, I might want to pick up 5 things along the way.
+        {
+            foreach (var item in cargo)
+            {
+                if (from.TryExport(item.Resource, item.Amount)) { Carrying.Add(new ResourceAmount(item.Resource, item.Amount)); }
+                else { Log += $"[Tick {tick}] Failed to pick up {item.Amount} x {item.Resource.Id}\n"; }
+            }
+
+            _target = to.Position;
+            Log += $"[Tick {tick}] Picked up {string.Join(", ", Carrying)}\n";
+        }
+        else // Deliver
+        {
+            foreach (var item in Carrying) { to.ReceiveImport(item.Resource, item.Amount); }
+
+            Log += $"[Tick {tick}] Delivered {string.Join(", ", Carrying)}\n";
+            Carrying.Clear();
+            _task = null;
+            _target = null;
+        }
+    }
 }
 
 public class ProductionFacility : IUpdatable
@@ -156,6 +147,9 @@ public class ProductionFacility : IUpdatable
             _activeJobs[recipe] = [];
         }
     }
+
+    public bool TryExport(Resource res, int amt) => _storage.Consume(res, amt);
+    public void ReceiveImport(Resource res, int amt) => _storage.Add(res, amt);
 
 
     [UsedImplicitly] public string GetDebugLog() => string.Join(Environment.NewLine, DebugLog);
@@ -232,6 +226,28 @@ public class ProductionFacility : IUpdatable
     private class ProductionJob
     {
         public int Elapsed;
+    }
+
+    public IEnumerable<(Resource resource, int amount)> GetPushOffers()
+    {
+        foreach (var (res, amt) in _storage.DumpExcess())
+        {
+            yield return (res, amt);
+        }
+    }
+
+
+
+    public IEnumerable<(Resource resource, int amount)> GetPullRequests()
+    {
+        foreach (var (recipe, _) in _workshops)
+        {
+            foreach (var input in recipe.Inputs)
+            {
+                var current = _storage.GetAmount(input.Key);
+                if (current < input.Value) { yield return (input.Key, input.Value - current); }
+            }
+        }
     }
 
     public int? GetTicksUntilNextEvent()

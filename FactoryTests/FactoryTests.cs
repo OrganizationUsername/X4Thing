@@ -38,10 +38,7 @@ public class FactoryTests
         storage.Add(ore, 4);        // Enough for 2 jobs
         storage.Add(energy, 1);     // Only enough for 1 job
 
-        var facility = new ProductionFacility(storage, new Dictionary<Recipe, int>
-        {
-            { recipe, 5 }, // 5 workshops, but resources restrict to 1 job
-        });
+        var facility = new ProductionFacility(storage, new Dictionary<Recipe, int> { { recipe, 5 }, });  // 5 workshops, but resources restrict to 1 job
 
         var ticker = new Ticker();
         ticker.Register(facility);
