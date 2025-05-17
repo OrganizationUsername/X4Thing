@@ -126,6 +126,16 @@ public class ProductionFacility : IUpdatable, IHasName
     public List<ResourceRequest> LastRequests { get; set; } = [];
 
 
+    public void SayWhatsOnTheWay(List<ResourceAmount> cargo)
+    {
+        //This should just let storage increase _incoming
+        foreach (var item in cargo)
+        {
+            _storage.MarkIncoming(item.Resource, item.Amount);
+        }
+
+    }
+
     public int? GetTicksUntilNextEvent()
     {
         int? soonestCompletion = null;
@@ -155,6 +165,16 @@ public class ResourceStorage
     private readonly Dictionary<Resource, int> _incoming = new();
 
     public Dictionary<Resource, int> GetAll() => new(_resources);
+    public Dictionary<Resource, int> GetAllIncludingIncoming()
+    {
+        var all = new Dictionary<Resource, int>(_resources);
+        foreach (var (key, value) in _incoming)
+        {
+            all.TryAdd(key, 0);
+            all[key] += value;
+        }
+        return all;
+    }
 
     public void Add(Resource type, int amount)
     {
@@ -185,5 +205,6 @@ public class ResourceStorage
     public int GetTotalIncludingIncoming(Resource type) => GetAmount(type) + GetIncomingAmount(type);
 
     public int GetAmount(Resource type) => _resources.GetValueOrDefault(type, 0);
+
     public int GetIncomingAmount(Resource type) => _incoming.GetValueOrDefault(type, 0);
 }

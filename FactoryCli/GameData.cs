@@ -67,7 +67,9 @@ public class GameData : IUpdatable
         var best = pulls
             .SelectMany(pull =>
                 pushes
-                    .Where(push => push.resource == pull.resource)
+                    .Where(push =>
+                        push.resource == pull.resource &&
+                        push.facility != pull.facility) // ❗ prevent self-delivery
                     .Select(push => new
                     {
                         From = push.facility,

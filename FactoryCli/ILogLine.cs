@@ -66,14 +66,14 @@ public class TransportAssignedLog(int tick, int transporterId, string resourceId
     public string Format() => $"[Tick {Tick:D4}] Transporter {TransporterId} assigned to deliver {Amount} x {ResourceId} from {From.Name}({From.Position}) to {To.Name}({To.Position})";
 }
 
-public class PickupLog(int tick, int transporterId, List<ResourceAmount> pickedUp, ProductionFacility pf) : ILogLine, ITransporterLog
+public class PickupLog(int tick, int transporterId, List<ResourceAmount> pickedUp, ProductionFacility? pf) : ILogLine, ITransporterLog
 {
     public int Tick { get; } = tick;
     public int TransporterId { get; } = transporterId;
     public List<ResourceAmount> PickedUp { get; } = pickedUp;
-    public ProductionFacility Facility { get; } = pf;
+    public ProductionFacility? Facility { get; } = pf;
 
-    public string Format() => $"[Tick {Tick:D4}] Transporter {TransporterId} picked up: {string.Join(", ", PickedUp)} from {Facility.Name}";
+    public string Format() => $"[Tick {Tick:D4}] Transporter {TransporterId} picked up: {string.Join(", ", PickedUp)} from {Facility?.Name ?? "Unknown"}";
 }
 
 public class TransportSplitLog(int tick, int transporterId, List<ResourceAmount> originalCargo, List<ResourceAmount> assignedNow, List<ResourceAmount> remaining) : ILogLine

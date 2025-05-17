@@ -25,6 +25,8 @@ public class Transporter : IUpdatable, IHasName
     public void AssignTask(ProductionFacility from, ProductionFacility to, List<ResourceAmount> cargo, int? currentTick = null)
     {
         var task = new TransportTask(from, to, cargo);
+        //on the `to` side, we should say how many items are on the way
+        to.SayWhatsOnTheWay(cargo);
         _taskQueue.Enqueue(task);
         LogLines.Add(new TransportAssignedLog(currentTick ?? 0, Id, cargo.First().Resource.Id, cargo.Sum(x => x.Amount), from, to));
     }
@@ -67,6 +69,7 @@ public class Transporter : IUpdatable, IHasName
     }
 
     private float _distanceTraveled = 0f;
+    public float DistanceTraveled => _distanceTraveled;
 
     public void Tick(int tick)
     {
@@ -121,7 +124,7 @@ public class Transporter : IUpdatable, IHasName
                 else { Carrying.Add(new ResourceAmount(item.Resource, amountToTake)); }
                 remainingVolume -= amountToTake * volumePerUnit;
 
-                LogLines.Add(new PickupLog(tick, Id, [new ResourceAmount(item.Resource, amountToTake),], _currentTask.Source));
+                LogLines.Add(new PickupLog(tick, Id, [new ResourceAmount(item.Resource, amountToTake),], _currentTask?.Source));
             }
             else
             {
@@ -199,5 +202,5 @@ public class TransportTask(ProductionFacility source, ProductionFacility dest, L
     public ProductionFacility Destination { get; } = dest;
     public List<ResourceAmount> Cargo { get; } = cargo;
 
-    public bool HasPickedUp { get; set; } = false;
+    public bool HasPickedUp { get; set; }
 }
