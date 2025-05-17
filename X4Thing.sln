@@ -5,6 +5,10 @@ VisualStudioVersion = 17.9.34723.18
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "X4Thing", "X4Thing\X4Thing.csproj", "{9B40E1CF-99D6-4841-BF80-D65445923BB1}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FactoryCli", "FactoryCli\FactoryCli.csproj", "{69C2D2A4-CBFE-40AE-BCF1-34DECCD2C47F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FactoryTests", "FactoryTests\FactoryTests.csproj", "{4CA1D032-62A6-4B44-BC3C-4A4228245B96}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +19,14 @@ Global
 		{9B40E1CF-99D6-4841-BF80-D65445923BB1}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9B40E1CF-99D6-4841-BF80-D65445923BB1}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9B40E1CF-99D6-4841-BF80-D65445923BB1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{69C2D2A4-CBFE-40AE-BCF1-34DECCD2C47F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{69C2D2A4-CBFE-40AE-BCF1-34DECCD2C47F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{69C2D2A4-CBFE-40AE-BCF1-34DECCD2C47F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{69C2D2A4-CBFE-40AE-BCF1-34DECCD2C47F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4CA1D032-62A6-4B44-BC3C-4A4228245B96}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4CA1D032-62A6-4B44-BC3C-4A4228245B96}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4CA1D032-62A6-4B44-BC3C-4A4228245B96}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4CA1D032-62A6-4B44-BC3C-4A4228245B96}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

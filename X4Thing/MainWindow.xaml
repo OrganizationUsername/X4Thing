@@ -30,7 +30,7 @@
             </DataGrid.Columns>
             <DataGrid.RowDetailsTemplate>
                 <DataTemplate>
-                    <DataGrid ItemsSource="{Binding Ship.Inventory}" AutoGenerateColumns="False" CanUserAddRows="False" d:DataContext="{d:ShipViewModel}">
+                    <DataGrid ItemsSource="{Binding Ship.Inventory}" AutoGenerateColumns="False" CanUserAddRows="False" d:DataContext="{local:ShipViewModel}">
                         <DataGrid.Style>
                             <Style TargetType="DataGrid">
                                 <Setter Property="Visibility" Value="Collapsed"/>

@@ -24,7 +24,11 @@ public partial class MainWindowViewModel : ObservableObject
         //Then the user sends the combat ship to destroy an enemy ship.
 
         AddShips();
+        AddStations();
+    }
 
+    private void AddStations()
+    {
         Stations.Add(new Station
         {
             Name = "S1",
@@ -47,7 +51,6 @@ public partial class MainWindowViewModel : ObservableObject
             ],
         });
     }
-
     private void AddShips()
     {
         var ship = new Ship
@@ -251,12 +254,12 @@ public class BuildProgress
 
 public class Ware(string name, long volume, long mass)
 {
-    public static Ware Water = new("Water", 1, 1);
-    public static Ware Food = new("Food", 1, 1);
-    public static Ware Energy = new("Energy", 1, 1);
-    public static Ware HullParts = new("HullParts", 1, 1);
-    public static Ware WeaponComponents = new("WeaponComponents", 1, 1);
-    public static Ware Steel = new("Steel", 1, 1);
+    public static readonly Ware Water = new("Water", 1, 1);
+    public static readonly Ware Food = new("Food", 1, 1);
+    public static readonly Ware Energy = new("Energy", 1, 1);
+    public static readonly Ware HullParts = new("HullParts", 1, 1);
+    public static readonly Ware WeaponComponents = new("WeaponComponents", 1, 1);
+    public static readonly Ware Steel = new("Steel", 1, 1);
 
     public string Name { get; set; } = name;
     public long Volume { get; set; } = volume;
