@@ -69,11 +69,7 @@ public class FactoryTests
         storage.Add(flour, 1);
         storage.Add(wheat, 2);
 
-        var facility = new ProductionFacility(storage, new Dictionary<Recipe, int>
-        {
-            { metalBarRecipe, 1 },
-            { breadRecipe, 1 },
-        });
+        var facility = new ProductionFacility(storage, new Dictionary<Recipe, int> { { metalBarRecipe, 1 }, { breadRecipe, 1 }, });
 
         var ticker = new Ticker();
         ticker.Register(facility);
@@ -97,10 +93,7 @@ public class FactoryTests
         storage.Add(ore, 2);
         storage.Add(energy, 1);
 
-        var facility = new ProductionFacility(storage, new Dictionary<Recipe, int>
-        {
-            { recipe, 1 },
-        });
+        var facility = new ProductionFacility(storage, new Dictionary<Recipe, int> { { recipe, 1 }, });
 
         var ticker = new Ticker();
         ticker.Register(facility);
