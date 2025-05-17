@@ -2,7 +2,7 @@
 
 namespace FactoryTests;
 
-public class UnitTest1
+public class FactoryTests
 {
     [Fact]
     public void ProductionFacility_DoesNotStartJobs_WhenResourcesAreInsufficient()
@@ -236,4 +236,135 @@ public class UnitTest1
         ticker.RunTicks(1);
         Assert.Equal(1, storage.GetAmount(ResourceType.ComputerPart)); // ✅ Done
     }
+
+    [Fact]
+    public void ProductionFacility_BeginsProduction_AfterWorkshopIsAdded()
+    {
+        var storage = new ResourceStorage();
+
+        // Add inputs upfront (enough for 1 MetalBar)
+        storage.Add(ResourceType.Ore, 2);
+        storage.Add(ResourceType.EnergyCell, 1);
+
+        // No workshops at initialization
+        var facility = new ProductionFacility(storage, new Dictionary<ResourceType, int>());
+
+        var ticker = new Ticker();
+        ticker.Register(facility);
+
+        // Tick 1–5: no workshops, no jobs started
+        ticker.RunTicks(5);
+        Assert.Equal(0, storage.GetAmount(ResourceType.MetalBar));
+
+        // Tick 6: add 1 workshop for MetalBar
+        facility.AddWorkshops(ResourceType.MetalBar, 1);
+
+        // Tick 6–15: production in progress (10 ticks)
+        ticker.RunTicks(10);
+        Assert.Equal(0, storage.GetAmount(ResourceType.MetalBar)); // Still producing
+
+        // Tick 16: job completes
+        ticker.RunTicks(1);
+        Assert.Equal(1, storage.GetAmount(ResourceType.MetalBar));
+    }
+
+    [Fact]
+    public void ProductionFacility_CreatesComputerPart_WhenWorkshopAdded_Later()
+    {
+        var storage = new ResourceStorage();
+
+        // Initial state:
+        storage.Add(ResourceType.MetalBar, 1); // pre-existing
+        storage.Add(ResourceType.Plastic, 1);
+        storage.Add(ResourceType.Ore, 2);
+        storage.Add(ResourceType.EnergyCell, 1);
+
+        var facility = new ProductionFacility(storage, new Dictionary<ResourceType, int>());
+        var ticker = new Ticker();
+        ticker.Register(facility);
+
+        // Tick 1–5: No workshops yet
+        ticker.RunTicks(5);
+        Assert.Equal(1, storage.GetAmount(ResourceType.MetalBar));
+        Assert.Equal(0, storage.GetAmount(ResourceType.ComputerPart));
+
+        // Tick 6: Add MetalBar workshop
+        facility.AddWorkshops(ResourceType.MetalBar, 1);
+
+        // Tick 6–15: MetalBar job in progress
+        ticker.RunTicks(10);
+        Assert.Equal(1, storage.GetAmount(ResourceType.MetalBar)); // Not yet finished, but we had one in the chamber
+        Assert.Equal(0, storage.GetAmount(ResourceType.ComputerPart));
+
+        // Tick 16: MetalBar completes
+        ticker.RunTicks(1);
+        Assert.Equal(2, storage.GetAmount(ResourceType.MetalBar)); // Now we have both
+        Assert.Equal(0, storage.GetAmount(ResourceType.ComputerPart));
+
+        // Tick 17: Add ComputerPart workshop
+        facility.AddWorkshops(ResourceType.ComputerPart, 1);
+
+        // Tick 17–26: ComputerPart job progresses
+        ticker.RunTicks(10);
+        Assert.Equal(0, storage.GetAmount(ResourceType.ComputerPart));
+
+        // Tick 27: ComputerPart completes
+        ticker.RunTicks(1);
+        Assert.Equal(1, storage.GetAmount(ResourceType.ComputerPart));
+    }
+
+    [Fact]
+    public void ProductionFacilities_Cooperate_ViaManualTransport()
+    {
+        // Station A: Ore + EnergyCell → MetalBar
+        var storageA = new ResourceStorage();
+        storageA.Add(ResourceType.Ore, 2);
+        storageA.Add(ResourceType.EnergyCell, 1);
+
+        var stationA = new ProductionFacility(storageA, new Dictionary<ResourceType, int>
+        {
+            { ResourceType.MetalBar, 1 },
+        });
+
+        // Station B: MetalBar + Plastic → ComputerPart
+        var storageB = new ResourceStorage();
+        storageB.Add(ResourceType.Plastic, 1); // waiting for MetalBar
+        storageB.Add(ResourceType.MetalBar, 1);
+
+        var stationB = new ProductionFacility(storageB, new Dictionary<ResourceType, int>
+        {
+            { ResourceType.ComputerPart, 1 },
+        });
+
+        var ticker = new Ticker();
+        ticker.Register(stationA);
+        ticker.Register(stationB);
+
+        // Run 10 ticks — MetalBar still in progress
+        ticker.RunTicks(10);
+        Assert.Equal(0, storageA.GetAmount(ResourceType.MetalBar));
+        Assert.Equal(0, storageB.GetAmount(ResourceType.ComputerPart));
+
+        // Tick 11 — MetalBar is produced
+        ticker.RunTicks(1);
+        Assert.Equal(1, storageA.GetAmount(ResourceType.MetalBar));
+
+        // Transporter manually moves the MetalBar to Station B
+        var transferred = storageA.Consume(ResourceType.MetalBar, 1);
+        Assert.True(transferred);
+        storageB.Add(ResourceType.MetalBar, 1);
+
+        // Tick 12–21 — ComputerPart is being worked on
+        ticker.RunTicks(9);
+        Assert.Equal(0, storageB.GetAmount(ResourceType.ComputerPart));
+
+        // Tick 22 — still in progress
+        ticker.RunTicks(1);
+        Assert.Equal(0, storageB.GetAmount(ResourceType.ComputerPart)); // not yet done
+
+        // Tick 23 — ComputerPart completes
+        ticker.RunTicks(1);
+        Assert.Equal(1, storageB.GetAmount(ResourceType.ComputerPart)); // ✅ done
+    }
+
 }

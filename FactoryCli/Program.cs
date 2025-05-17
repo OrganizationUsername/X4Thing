@@ -1,8 +1,10 @@
-﻿namespace FactoryCli;
+﻿using JetBrains.Annotations;
+
+namespace FactoryCli;
 
 internal class Program
 {
-    static void Main()
+    private static void Main()
     {
         Console.WriteLine("Hello, World!");
     }
@@ -29,8 +31,7 @@ public static class RecipeDatabase
                 { ResourceType.Ore, 2 },
                 { ResourceType.EnergyCell, 1 },
             },
-            duration: 10,
-            requiredWorkshops: 1
+            duration: 10
         );
 
         Recipes[ResourceType.Bread] = new Recipe(
@@ -41,8 +42,7 @@ public static class RecipeDatabase
                 { ResourceType.Wheat, 2 },
                 { ResourceType.Flour, 1 },
             },
-            duration: 8,
-            requiredWorkshops: 1
+            duration: 8
         );
         Recipes[ResourceType.ComputerPart] = new Recipe(
             output: ResourceType.ComputerPart,
@@ -52,8 +52,7 @@ public static class RecipeDatabase
                 { ResourceType.MetalBar, 2 },
                 { ResourceType.Plastic, 1 },
             },
-            duration: 10,
-            requiredWorkshops: 1
+            duration: 10
         );
     }
 
@@ -64,13 +63,12 @@ public static class RecipeDatabase
     }
 }
 
-public class Recipe(ResourceType output, int outputAmount, Dictionary<ResourceType, int> inputs, int duration, int requiredWorkshops)
+public class Recipe(ResourceType output, int outputAmount, Dictionary<ResourceType, int> inputs, int duration)
 {
     public ResourceType Output { get; } = output;
     public int OutputAmount { get; } = outputAmount;
     public Dictionary<ResourceType, int> Inputs { get; } = inputs;
     public int Duration { get; } = duration;
-    public int RequiredWorkshops { get; } = requiredWorkshops;
 }
 
 public class ResourceStorage
@@ -119,21 +117,19 @@ public class ProductionFacility : IUpdatable
         }
     }
 
+    [UsedImplicitly] public string GetDebugLog() => string.Join(Environment.NewLine, DebugLog);
+
     public void AddWorkshops(ResourceType product, int count)
     {
         if (!_recipes.ContainsKey(product))
         {
-            var recipe = RecipeDatabase.GetRecipe(product)
-                ?? throw new Exception($"Cannot add workshops for {product}: recipe not found.");
+            var recipe = RecipeDatabase.GetRecipe(product) ?? throw new Exception($"Cannot add workshops for {product}: recipe not found.");
 
             _recipes[product] = recipe;
             _activeJobs[product] = [];
         }
 
-        if (_workshops.ContainsKey(product))
-            _workshops[product] += count;
-        else
-            _workshops[product] = count;
+        if (!_workshops.TryAdd(product, count)) { _workshops[product] += count; }
 
         DebugLog.Add($"  Added {count} workshop(s) for {product}");
     }
@@ -202,9 +198,36 @@ public class ProductionFacility : IUpdatable
     {
         public int Elapsed;
     }
+
+    public int? GetTicksUntilNextEvent()
+    {
+        int? soonestCompletion = null;
+
+        foreach (var (product, recipe) in _recipes)
+        {
+            var jobs = _activeJobs[product];
+            var availableWorkshops = _workshops.GetValueOrDefault(product) - jobs.Count;
+
+            // Check job completion times
+            foreach (var job in jobs)
+            {
+                var ticksRemaining = recipe.Duration - job.Elapsed;
+                if (soonestCompletion == null || ticksRemaining < soonestCompletion)
+                    soonestCompletion = ticksRemaining;
+            }
+
+            // Check if any job could start now
+            if (availableWorkshops > 0 && CanConsumeInputs(recipe.Inputs))
+            {
+                // Something could happen *now*
+                return 0;
+            }
+        }
+
+        return soonestCompletion;
+    }
+
 }
-
-
 
 public class Ticker
 {
