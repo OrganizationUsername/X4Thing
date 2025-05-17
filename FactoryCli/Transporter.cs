@@ -29,6 +29,45 @@ public class Transporter : IUpdatable, IHasName
         LogLines.Add(new TransportAssignedLog(currentTick ?? 0, Id, cargo.First().Resource.Id, cargo.Sum(x => x.Amount), from, to));
     }
 
+    public void NewAssignTask(ProductionFacility source, ProductionFacility dest, List<ResourceAmount> cargo, int currentTick = 0)
+    {
+        var availableVolume = MaxVolume - Carrying.Sum(c => c.Resource.Volume * c.Amount);
+        var fitting = new List<ResourceAmount>();
+        var overflow = new List<ResourceAmount>();
+
+        foreach (var item in cargo)
+        {
+            var perUnitVol = item.Resource.Volume;
+            if (perUnitVol <= 0) continue;
+
+            var maxUnits = (int)(availableVolume / perUnitVol);
+            var assignAmount = Math.Min(maxUnits, item.Amount);
+
+            if (assignAmount > 0)
+            {
+                fitting.Add(new ResourceAmount(item.Resource, assignAmount));
+                availableVolume -= assignAmount * perUnitVol;
+            }
+
+            var remaining = item.Amount - assignAmount;
+            if (remaining > 0)
+            {
+                overflow.Add(new ResourceAmount(item.Resource, remaining));
+            }
+        }
+
+        if (fitting.Count > 0) { _taskQueue.Enqueue(new TransportTask(source, dest, fitting)); }
+
+        if (overflow.Count > 0)
+        {
+            // Optional: delay re-queueing for game balance purposes
+            _taskQueue.Enqueue(new TransportTask(source, dest, overflow));
+            LogLines.Add(new TransportSplitLog(tick: currentTick, transporterId: this.Id, originalCargo: cargo, assignedNow: fitting, remaining: overflow));
+        }
+    }
+
+    private float _distanceTraveled = 0f;
+
     public void Tick(int tick)
     {
         if (_currentTask is null)
@@ -48,10 +87,15 @@ public class Transporter : IUpdatable, IHasName
         if (distance > SpeedPerTick)
         {
             Position += Vector2.Normalize(direction) * SpeedPerTick;
+            _distanceTraveled += SpeedPerTick;
             return;
         }
-
-        Position = _target.Value; // Arrived at target
+        else
+        {
+            _distanceTraveled += distance;
+            Position = _target.Value;
+            _target = null;
+        }
 
         if (!task.HasPickedUp)
         {
@@ -87,18 +131,36 @@ public class Transporter : IUpdatable, IHasName
         }
         else
         {
-            foreach (var item in Carrying) //we shouldn't be iterating through what it's carrying, but what it's current task is and delivering as many as possible
+            var failed = new List<ResourceAmount>();
+
+            foreach (var taskItem in task.Cargo)
             {
-                var amountToTransfer = _currentTask.Cargo.FirstOrDefault(x => x.Resource == item.Resource)?.Amount;
-                if (amountToTransfer is null) { continue; } // No need to transfer this item
-                if (item.Amount < amountToTransfer) { amountToTransfer = item.Amount; }
-                task.Destination.ReceiveImport(item.Resource, amountToTransfer.Value, tick, this);
-                LogLines.Add(new DeliveryLog(tick, Id, task.Destination.Position, [new(item.Resource, amountToTransfer.Value),]));
-                item.Amount -= amountToTransfer.Value;
+                var carried = Carrying.FirstOrDefault(c => c.Resource == taskItem.Resource);
+                var available = carried?.Amount ?? 0;
+                var toDeliver = Math.Min(available, taskItem.Amount);
+
+                if (toDeliver > 0)
+                {
+                    task.Destination.ReceiveImport(taskItem.Resource, toDeliver, tick, this);
+                    LogLines.Add(new DeliveryLog(tick, Id, task.Destination.Position, [new(taskItem.Resource, toDeliver)]));
+                    carried!.Amount -= toDeliver;
+                }
+
+                if (toDeliver < taskItem.Amount)
+                {
+                    failed.Add(new ResourceAmount(taskItem.Resource, taskItem.Amount - toDeliver));
+                }
             }
+
+            if (failed.Count > 0)
+            {
+                LogLines.Add(new DeliveryFailedLog(tick, Id, failed, task.Destination));
+            }
+
             Carrying.RemoveAll(item => item.Amount == 0);
             _currentTask = null;
             _target = null;
+
         }
     }
 }

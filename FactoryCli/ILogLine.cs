@@ -76,6 +76,25 @@ public class PickupLog(int tick, int transporterId, List<ResourceAmount> pickedU
     public string Format() => $"[Tick {Tick:D4}] Transporter {TransporterId} picked up: {string.Join(", ", PickedUp)} from {Facility.Name}";
 }
 
+public class TransportSplitLog(int tick, int transporterId, List<ResourceAmount> originalCargo, List<ResourceAmount> assignedNow, List<ResourceAmount> remaining) : ILogLine
+{
+    public int Tick { get; } = tick;
+    public int TransporterId { get; } = transporterId;
+    public List<ResourceAmount> OriginalCargo { get; } = originalCargo;
+    public List<ResourceAmount> AssignedNow { get; } = assignedNow;
+    public List<ResourceAmount> Remaining { get; } = remaining;
+    public string Format() => $"[Tick {Tick:D4}] Transporter {TransporterId} split delivery: now={string.Join(", ", AssignedNow)}, remaining={string.Join(", ", Remaining)}";
+}
+
+public class DeliveryFailedLog(int tick, int transporterId, List<ResourceAmount> failed, ProductionFacility pf) : ILogLine, ITransporterLog
+{
+    public int Tick { get; } = tick;
+    public int TransporterId { get; } = transporterId;
+    public List<ResourceAmount> Failed { get; } = failed;
+    public ProductionFacility Facility { get; } = pf;
+    public string Format() => $"[Tick {Tick:D4}] Transporter {TransporterId} failed to deliver: {string.Join(", ", Failed)} to {Facility.Name}";
+}
+
 public class DeliveryLog(int tick, int transporterId, Vector2 destination, List<ResourceAmount> delivered) : ILogLine, ITransporterLog
 {
     public int Tick { get; } = tick;

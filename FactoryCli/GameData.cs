@@ -92,6 +92,37 @@ public class GameData : IUpdatable
         var bread = GetResource("bread");
         var plastic = GetResource("plastic");
         var computerPart = GetResource("computer_part");
+        var siliconWafer = GetResource("silicon_wafer");
+        var aiModule = GetResource("ai_module");
+        var sand = GetResource("sand");
+
+        /*
+           Station	    Produces        Needs
+           A	        metal_bar	    ore, energy_cell
+           B	        computer_part	metal_bar, plastic
+           C	        silicon_wafer	sand, energy_cell
+           D	        ai_module	    computer_part, silicon_wafer
+         */
+
+        AddRecipe(new Recipe
+        {
+            Id = "recipe_ai_module",
+            Output = aiModule,
+            OutputAmount = 1,
+            Duration = 12,
+            Inputs = new Dictionary<Resource, int> { { computerPart, 1 }, { siliconWafer, 2 }, },
+            Benefit = 22f, // e.g., $28 input → $50 value
+        });
+
+        AddRecipe(new Recipe
+        {
+            Id = "recipe_silicon_wafer",
+            Output = siliconWafer,
+            OutputAmount = 1,
+            Duration = 6,
+            Inputs = new Dictionary<Resource, int> { { sand, 3 }, { energyCell, 1 }, },
+            Benefit = 2f, // Example: $1.5 inputs → $4 output
+        });
 
         AddRecipe(new Recipe
         {
@@ -99,11 +130,7 @@ public class GameData : IUpdatable
             Output = metalBar,
             OutputAmount = 1,
             Duration = 10,
-            Inputs = new Dictionary<Resource, int>
-            {
-                { ore, 2 },
-                { energyCell, 1 },
-            },
+            Inputs = new Dictionary<Resource, int> { { ore, 2 }, { energyCell, 1 }, },
             Benefit = 2f, // From 2×$1 (ore) + $2 (cell) → $5 bar = $1 net + strategic value
         });
 
@@ -113,11 +140,7 @@ public class GameData : IUpdatable
             Output = bread,
             OutputAmount = 1,
             Duration = 8,
-            Inputs = new Dictionary<Resource, int>
-            {
-                { wheat, 2 }, // $2
-                { flour, 1 }, // $1.5
-            },
+            Inputs = new Dictionary<Resource, int> { { wheat, 2 }, { flour, 1 }, },
             Benefit = 1.5f, // $3.5 → $5 (or just gameplay-tuned)
         });
 
@@ -127,15 +150,11 @@ public class GameData : IUpdatable
             Output = computerPart,
             OutputAmount = 1,
             Duration = 10,
-            Inputs = new Dictionary<Resource, int>
-            {
-                { metalBar, 2 }, // $10
-                { plastic, 1 },  // $2
-            },
+            Inputs = new Dictionary<Resource, int> { { metalBar, 2 }, { plastic, 1 }, },
             Benefit = 8f, // $12 → $20 = +$8
         });
-
     }
+
     private void InitializeResources()
     {
         AddResource(new Resource { Id = "ore", DisplayName = "Ore", BaseValue = 1, Volume = 3.0f, });
@@ -146,7 +165,11 @@ public class GameData : IUpdatable
         AddResource(new Resource { Id = "bread", DisplayName = "Bread", BaseValue = 3, Volume = 1.2f, });
         AddResource(new Resource { Id = "plastic", DisplayName = "Plastic", BaseValue = 2, Volume = 0.8f, });
         AddResource(new Resource { Id = "computer_part", DisplayName = "Computer Part", BaseValue = 20, Volume = 0.2f, });
+        AddResource(new Resource { Id = "silicon_wafer", DisplayName = "Silicon Wafer", BaseValue = 4, Volume = 0.5f, });
+        AddResource(new Resource { Id = "ai_module", DisplayName = "AI Module", BaseValue = 50, Volume = 1.0f, });
+        AddResource(new Resource { Id = "sand", DisplayName = "Sand", BaseValue = 0.5f, Volume = 1.0f, });
     }
+
     public IEnumerable<(ProductionFacility facility, Resource resource, int amount)> GetPushOffers()
     {
         foreach (var facility in Facilities)

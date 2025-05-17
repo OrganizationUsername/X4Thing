@@ -281,10 +281,21 @@ public class TransporterTests
         ticker.Register(transporter);
         ticker.Register(dest);
 
-        ticker.RunTicks(3); // Tick 1: pickup, Tick 2-3: movement & delivery
+        ticker.RunTicks(10); // Tick 1: pickup, Tick 2-3: movement & delivery
+
+        gameData.Facilities.Add(source);
+        gameData.Facilities.Add(dest);
+        gameData.Transporters.Add(transporter);
+        var formattedLogs = gameData.GetAllLogsFormatted();
+        /*
+         [Tick 0000] Transporter 0 assigned to deliver 500 x metal_bar from Production(<0, 0>) to Production(<5, 0>)
+           [Tick 0001] Transporter 0 picked up: 6 x metal_bar from Production
+           [Tick 0002] Transporter 0 failed to deliver: 494 x metal_bar to Production
+         */
+        ;
 
         // Only 6 bars should be picked up and delivered
-        Assert.Equal(6, destStorage.GetAmount(metalBar));
+        Assert.Equal(6, destStorage.GetAmount(metalBar)); //FAIL 0
         Assert.Empty(transporter.Carrying);
 
         // Confirm that source has 494 left
@@ -575,4 +586,280 @@ public class TransporterTests
         var allFormatted = string.Join(Environment.NewLine, logs.Select(l => l.Format()));
         Assert.Contains("computer_part", allFormatted);
     }
+
+    [Fact]
+    public void Transporter_ProducesAndDelivers_AiModule_FromChainedStations()
+    {
+        var gameData = GameData.GetDefault();
+
+        var ore = gameData.GetResource("ore");
+        var energy = gameData.GetResource("energy_cell");
+        var sand = gameData.GetResource("sand");
+        var plastic = gameData.GetResource("plastic");
+        var aiModule = gameData.GetResource("ai_module");
+
+        // --- Station A: Metal Bar production
+        var aStorage = new ResourceStorage();
+        aStorage.Add(ore, 100);
+        aStorage.Add(energy, 100);
+        var a = new ProductionFacility(aStorage, new() { { gameData.GetRecipe("recipe_metal_bar"), 2 }, }) { Position = new Vector2(0, 0), Name = "StationA", };
+
+        // --- Station B: Computer Part
+        var bStorage = new ResourceStorage();
+        bStorage.Add(plastic, 10);
+        var b = new ProductionFacility(bStorage, new() { { gameData.GetRecipe("recipe_computer_part"), 1 }, }) { Position = new Vector2(5, 0), Name = "StationB", };
+
+        // --- Station C: Silicon Wafer
+        var cStorage = new ResourceStorage();
+        cStorage.Add(sand, 100);
+        cStorage.Add(energy, 100);
+        var c = new ProductionFacility(cStorage, new() { { gameData.GetRecipe("recipe_silicon_wafer"), 2 }, }) { Position = new Vector2(10, 0), Name = "StationC", };
+
+        // --- Station D: Final AI Module
+        var dStorage = new ResourceStorage();
+        var d = new ProductionFacility(dStorage, new() { { gameData.GetRecipe("recipe_ai_module"), 1 }, }) { Position = new Vector2(15, 0), Name = "StationD", };
+
+        // --- Single Transporter
+        var transporter = new Transporter { Position = new Vector2(0, 0), SpeedPerTick = 1f, MaxVolume = 50f, Id = 42, };
+
+        // --- Setup
+        gameData.Facilities.AddRange([a, b, c, d,]);
+        gameData.Transporters.Add(transporter);
+
+        var ticker = new Ticker { GameData = gameData, };
+        ticker.Register(a);
+        ticker.Register(b);
+        ticker.Register(c);
+        ticker.Register(d);
+        ticker.Register(transporter);
+
+        // --- Run simulation
+        ticker.RunTicks(481);
+
+        // --- Verify final output
+        var logs = gameData.GetAllLogs().ToList();
+        var formatted = gameData.GetAllLogsFormatted();
+
+        /*
+           [Tick 0001] Started job for metal_bar (duration: 10) at <0, 0>
+           [Tick 0001] Started job for metal_bar (duration: 10) at <0, 0>
+           [Tick 0001] Started job for silicon_wafer (duration: 6) at <10, 0>
+           [Tick 0001] Started job for silicon_wafer (duration: 6) at <10, 0>
+           [Tick 0007] Completed job for silicon_wafer, output added to storage at <10, 0>
+           [Tick 0007] Completed job for silicon_wafer, output added to storage at <10, 0>
+           [Tick 0007] Started job for silicon_wafer (duration: 6) at <10, 0>
+           [Tick 0007] Started job for silicon_wafer (duration: 6) at <10, 0>
+           [Tick 0007] Transporter 42 assigned to deliver 2 x silicon_wafer from StationC(<10, 0>) to StationD(<15, 0>)
+           [Tick 0011] Completed job for metal_bar, output added to storage at <0, 0>
+           [Tick 0011] Completed job for metal_bar, output added to storage at <0, 0>
+           [Tick 0011] Started job for metal_bar (duration: 10) at <0, 0>
+           [Tick 0011] Started job for metal_bar (duration: 10) at <0, 0>
+           [Tick 0013] Completed job for silicon_wafer, output added to storage at <10, 0>
+           [Tick 0013] Completed job for silicon_wafer, output added to storage at <10, 0>
+           [Tick 0013] Started job for silicon_wafer (duration: 6) at <10, 0>
+           [Tick 0013] Started job for silicon_wafer (duration: 6) at <10, 0>
+           [Tick 0016] Transporter 42 picked up: 2 x silicon_wafer from StationC
+           [Tick 0019] Completed job for silicon_wafer, output added to storage at <10, 0>
+           [Tick 0019] Completed job for silicon_wafer, output added to storage at <10, 0>
+           [Tick 0019] Started job for silicon_wafer (duration: 6) at <10, 0>
+           [Tick 0019] Started job for silicon_wafer (duration: 6) at <10, 0>
+           [Tick 0021] Completed job for metal_bar, output added to storage at <0, 0>
+           [Tick 0021] Completed job for metal_bar, output added to storage at <0, 0>
+           [Tick 0021] Started job for metal_bar (duration: 10) at <0, 0>
+           [Tick 0021] Started job for metal_bar (duration: 10) at <0, 0>
+           [Tick 0021] Received 2 of silicon_wafer from Transporter at <15, 0>
+           [Tick 0021] Transporter 42 delivered to <15, 0>: 2 x silicon_wafer
+           [Tick 0022] Transporter 42 assigned to deliver 2 x metal_bar from StationA(<0, 0>) to StationB(<5, 0>)
+           [Tick 0025] Completed job for silicon_wafer, output added to storage at <10, 0>
+           [Tick 0025] Completed job for silicon_wafer, output added to storage at <10, 0>
+           [Tick 0025] Started job for silicon_wafer (duration: 6) at <10, 0>
+           [Tick 0025] Started job for silicon_wafer (duration: 6) at <10, 0>
+           [Tick 0031] Completed job for metal_bar, output added to storage at <0, 0>
+           [Tick 0031] Completed job for metal_bar, output added to storage at <0, 0>
+           [Tick 0031] Started job for metal_bar (duration: 10) at <0, 0>
+           [Tick 0031] Started job for metal_bar (duration: 10) at <0, 0>
+           [Tick 0031] Completed job for silicon_wafer, output added to storage at <10, 0>
+           [Tick 0031] Completed job for silicon_wafer, output added to storage at <10, 0>
+           [Tick 0031] Started job for silicon_wafer (duration: 6) at <10, 0>
+           [Tick 0031] Started job for silicon_wafer (duration: 6) at <10, 0>
+           [Tick 0036] Transporter 42 picked up: 2 x metal_bar from StationA
+           [Tick 0037] Completed job for silicon_wafer, output added to storage at <10, 0>
+           [Tick 0037] Completed job for silicon_wafer, output added to storage at <10, 0>
+           [Tick 0037] Started job for silicon_wafer (duration: 6) at <10, 0>
+           [Tick 0037] Started job for silicon_wafer (duration: 6) at <10, 0>
+           [Tick 0041] Completed job for metal_bar, output added to storage at <0, 0>
+           [Tick 0041] Completed job for metal_bar, output added to storage at <0, 0>
+           [Tick 0041] Started job for metal_bar (duration: 10) at <0, 0>
+           [Tick 0041] Started job for metal_bar (duration: 10) at <0, 0>
+           [Tick 0041] Received 2 of metal_bar from Transporter at <5, 0>
+           [Tick 0041] Transporter 42 delivered to <5, 0>: 2 x metal_bar
+           [Tick 0042] Started job for computer_part (duration: 10) at <5, 0>
+           [Tick 0042] Transporter 42 assigned to deliver 2 x metal_bar from StationA(<0, 0>) to StationB(<5, 0>)
+           [Tick 0043] Completed job for silicon_wafer, output added to storage at <10, 0>
+           [Tick 0043] Completed job for silicon_wafer, output added to storage at <10, 0>
+           [Tick 0043] Started job for silicon_wafer (duration: 6) at <10, 0>
+           [Tick 0043] Started job for silicon_wafer (duration: 6) at <10, 0>
+           [Tick 0046] Transporter 42 picked up: 2 x metal_bar from StationA
+           [Tick 0049] Completed job for silicon_wafer, output added to storage at <10, 0>
+           [Tick 0049] Completed job for silicon_wafer, output added to storage at <10, 0>
+           [Tick 0049] Started job for silicon_wafer (duration: 6) at <10, 0>
+           [Tick 0049] Started job for silicon_wafer (duration: 6) at <10, 0>
+           [Tick 0051] Completed job for metal_bar, output added to storage at <0, 0>
+           [Tick 0051] Completed job for metal_bar, output added to storage at <0, 0>
+           [Tick 0051] Started job for metal_bar (duration: 10) at <0, 0>
+           [Tick 0051] Started job for metal_bar (duration: 10) at <0, 0>
+           [Tick 0051] Received 2 of metal_bar from Transporter at <5, 0>
+           [Tick 0051] Transporter 42 delivered to <5, 0>: 2 x metal_bar
+           [Tick 0052] Completed job for computer_part, output added to storage at <5, 0>
+           [Tick 0052] Started job for computer_part (duration: 10) at <5, 0>
+           [Tick 0052] Transporter 42 assigned to deliver 1 x computer_part from StationB(<5, 0>) to StationD(<15, 0>)
+           [Tick 0052] Transporter 42 picked up: 1 x computer_part from StationB
+           [Tick 0055] Completed job for silicon_wafer, output added to storage at <10, 0>
+           [Tick 0055] Completed job for silicon_wafer, output added to storage at <10, 0>
+           [Tick 0055] Started job for silicon_wafer (duration: 6) at <10, 0>
+           [Tick 0055] Started job for silicon_wafer (duration: 6) at <10, 0>
+           [Tick 0061] Completed job for metal_bar, output added to storage at <0, 0>
+           [Tick 0061] Completed job for metal_bar, output added to storage at <0, 0>
+           [Tick 0061] Started job for metal_bar (duration: 10) at <0, 0>
+           [Tick 0061] Started job for metal_bar (duration: 10) at <0, 0>
+           [Tick 0061] Completed job for silicon_wafer, output added to storage at <10, 0>
+           [Tick 0061] Completed job for silicon_wafer, output added to storage at <10, 0>
+           [Tick 0061] Started job for silicon_wafer (duration: 6) at <10, 0>
+           [Tick 0061] Started job for silicon_wafer (duration: 6) at <10, 0>
+           [Tick 0062] Completed job for computer_part, output added to storage at <5, 0>
+           [Tick 0062] Received 1 of computer_part from Transporter at <15, 0>
+           [Tick 0062] Transporter 42 delivered to <15, 0>: 1 x computer_part
+           [Tick 0063] Started job for ai_module (duration: 12) at <15, 0>
+           [Tick 0063] Transporter 42 assigned to deliver 2 x metal_bar from StationA(<0, 0>) to StationB(<5, 0>)
+           [Tick 0067] Completed job for silicon_wafer, output added to storage at <10, 0>
+           [Tick 0067] Completed job for silicon_wafer, output added to storage at <10, 0>
+           [Tick 0067] Started job for silicon_wafer (duration: 6) at <10, 0>
+           [Tick 0067] Started job for silicon_wafer (duration: 6) at <10, 0>
+           [Tick 0071] Completed job for metal_bar, output added to storage at <0, 0>
+           [Tick 0071] Completed job for metal_bar, output added to storage at <0, 0>
+           [Tick 0071] Started job for metal_bar (duration: 10) at <0, 0>
+           [Tick 0071] Started job for metal_bar (duration: 10) at <0, 0>
+           [Tick 0073] Completed job for silicon_wafer, output added to storage at <10, 0>
+           [Tick 0073] Completed job for silicon_wafer, output added to storage at <10, 0>
+           [Tick 0073] Started job for silicon_wafer (duration: 6) at <10, 0>
+           [Tick 0073] Started job for silicon_wafer (duration: 6) at <10, 0>
+           [Tick 0075] Completed job for ai_module, output added to storage at <15, 0>
+           [Tick 0077] Transporter 42 picked up: 2 x metal_bar from StationA
+           [Tick 0079] Completed job for silicon_wafer, output added to storage at <10, 0>
+           [Tick 0079] Completed job for silicon_wafer, output added to storage at <10, 0>
+           [Tick 0079] Started job for silicon_wafer (duration: 6) at <10, 0>
+           [Tick 0079] Started job for silicon_wafer (duration: 6) at <10, 0>
+           [Tick 0081] Completed job for metal_bar, output added to storage at <0, 0>
+           [Tick 0081] Completed job for metal_bar, output added to storage at <0, 0>
+           [Tick 0081] Started job for metal_bar (duration: 10) at <0, 0>
+           [Tick 0081] Started job for metal_bar (duration: 10) at <0, 0>
+           [Tick 0082] Received 2 of metal_bar from Transporter at <5, 0>
+           [Tick 0082] Transporter 42 delivered to <5, 0>: 2 x metal_bar
+           [Tick 0083] Started job for computer_part (duration: 10) at <5, 0>
+           [Tick 0083] Transporter 42 assigned to deliver 1 x computer_part from StationB(<5, 0>) to StationD(<15, 0>)
+           [Tick 0083] Transporter 42 picked up: 1 x computer_part from StationB
+           [Tick 0085] Completed job for silicon_wafer, output added to storage at <10, 0>
+           [Tick 0085] Completed job for silicon_wafer, output added to storage at <10, 0>
+           [Tick 0085] Started job for silicon_wafer (duration: 6) at <10, 0>
+           [Tick 0085] Started job for silicon_wafer (duration: 6) at <10, 0>
+           [Tick 0091] Completed job for metal_bar, output added to storage at <0, 0>
+           [Tick 0091] Completed job for metal_bar, output added to storage at <0, 0>
+           [Tick 0091] Started job for metal_bar (duration: 10) at <0, 0>
+           [Tick 0091] Started job for metal_bar (duration: 10) at <0, 0>
+           [Tick 0091] Completed job for silicon_wafer, output added to storage at <10, 0>
+           [Tick 0091] Completed job for silicon_wafer, output added to storage at <10, 0>
+           [Tick 0091] Started job for silicon_wafer (duration: 6) at <10, 0>
+           [Tick 0091] Started job for silicon_wafer (duration: 6) at <10, 0>
+           [Tick 0093] Completed job for computer_part, output added to storage at <5, 0>
+           [Tick 0093] Received 1 of computer_part from Transporter at <15, 0>
+           [Tick 0093] Transporter 42 delivered to <15, 0>: 1 x computer_part
+           [Tick 0094] Transporter 42 assigned to deliver 2 x metal_bar from StationA(<0, 0>) to StationB(<5, 0>)
+           [Tick 0097] Completed job for silicon_wafer, output added to storage at <10, 0>
+           [Tick 0097] Completed job for silicon_wafer, output added to storage at <10, 0>
+           [Tick 0097] Started job for silicon_wafer (duration: 6) at <10, 0>         
+         */
+
+        Assert.Contains(logs, l => l is ProductionCompletedLog { ResourceId: "metal_bar", });
+        Assert.Contains(logs, l => l is ProductionCompletedLog { ResourceId: "computer_part", });
+        Assert.Contains(logs, l => l is ProductionCompletedLog { ResourceId: "silicon_wafer", });
+        Assert.Contains(logs, l => l is ProductionCompletedLog { ResourceId: "ai_module", });
+
+        Assert.Equal(10, dStorage.GetAmount(aiModule));
+
+        // Confirm delivery and receipt logs
+        Assert.Contains(logs, l => l is DeliveryLog dl && dl.Delivered.Any(d => d.Resource.Id == "ai_module") == false); // only intermediate deliveries
+        Assert.True(logs.OfType<TransportReceivedLog>().Any(r => r.ResourceId == "computer_part" || r.ResourceId == "silicon_wafer"));
+
+        foreach (var t in gameData.Transporters)
+        {
+            Assert.Empty(t.Carrying);
+            Assert.False(t.HasActiveTask());
+        }
+
+        ticker.RunTicks(1000);
+        Assert.Equal(10, dStorage.GetAmount(aiModule));
+    }
+
+    [Fact]
+    public void Transporter_LogsFailedDelivery_WhenExpectedCargoIsMissing()
+    {
+        var gameData = GameData.GetDefault();
+        var metalBar = gameData.GetResource("metal_bar");
+        var plastic = gameData.GetResource("plastic");
+
+        // --- Source and destination setup
+        var sourceStorage = new ResourceStorage();
+        sourceStorage.Add(metalBar, 5);
+        var source = new ProductionFacility(sourceStorage, []) { Position = new Vector2(0, 0), Name = "Source", };
+
+        var destStorage = new ResourceStorage();
+        var dest = new ProductionFacility(destStorage, []) { Position = new Vector2(5, 0), Name = "Destination", };
+
+        // --- Transporter
+        var transporter = new Transporter { Position = new Vector2(0, 0), SpeedPerTick = 1f, MaxVolume = 10f, Id = 101, };
+
+        // Use NewAssignTask instead of AssignTask
+        transporter.NewAssignTask(source, dest, [new ResourceAmount(metalBar, 3),], currentTick: 0);
+
+        // Sneak plastic into inventory before delivery (simulate weird state)
+        transporter.Carrying.Add(new ResourceAmount(plastic, 1));
+
+        var ticker = new Ticker { GameData = gameData, };
+        gameData.Transporters.Add(transporter);
+        gameData.Facilities.Add(source);
+        gameData.Facilities.Add(dest);
+
+        ticker.Register(source);
+        ticker.Register(dest);
+        ticker.Register(transporter);
+
+        // --- Tick: reach destination and attempt delivery
+        ticker.RunTicks(2); // transporter reaches destination and delivers
+        //remove items from Transport
+        transporter.Carrying.RemoveAll(r => r.Resource == metalBar);
+        ticker.RunTicks(10); // transporter reaches destination and delivers
+
+
+        // --- Validate failed delivery
+        var logs = gameData.GetAllLogs();
+        var formattedLogs = gameData.GetAllLogsFormatted();
+        /*
+           [Tick 0001] Transporter 101 picked up: 3 x metal_bar from Source
+           [Tick 0006] Transporter 101 failed to deliver: 3 x metal_bar to Destination     
+         */
+
+        var failedLog = logs.OfType<DeliveryFailedLog>().FirstOrDefault();
+
+        Assert.NotNull(failedLog);
+        Assert.Equal(101, failedLog.TransporterId);
+        Assert.Contains(failedLog.Failed, r => r.Resource == metalBar );
+        Assert.Equal(dest, failedLog.Facility);
+
+        // Ensure the undelivered plastic is still being carried
+        Assert.Contains(transporter.Carrying, c => c.Resource == plastic && c.Amount == 1);
+    }
+
+
+
+
 }
