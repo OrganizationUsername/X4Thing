@@ -51,10 +51,27 @@ public class Transporter : IUpdatable
 
         if (!task.HasPickedUp)
         {
-            Carrying.Clear();
+            var usedVolume = Carrying.Sum(c => c.Resource.Volume * c.Amount);
+            var remainingVolume = MaxVolume - usedVolume;
+
             foreach (var item in task.Cargo)
             {
-                if (task.Source.TryExport(item.Resource, item.Amount)) { Carrying.Add(new ResourceAmount(item.Resource, item.Amount)); }
+                var volumePerUnit = item.Resource.Volume;
+                if (volumePerUnit <= 0) continue;
+
+                var maxUnits = (int)(remainingVolume / volumePerUnit);
+                if (maxUnits == 0) break;
+
+                var amountToTake = Math.Min(item.Amount, maxUnits);
+
+                if (amountToTake > 0 && task.Source.TryExport(item.Resource, amountToTake))
+                {
+                    var existing = Carrying.FirstOrDefault(x => x.Resource == item.Resource);
+                    if (existing != null) { existing.Amount += amountToTake; }
+                    else { Carrying.Add(new ResourceAmount(item.Resource, amountToTake)); }
+
+                    remainingVolume -= amountToTake * volumePerUnit;
+                }
                 else { Log += $"[Tick {tick}] Failed to pick up {item.Amount} x {item.Resource.Id}\n"; }
             }
 
@@ -64,10 +81,16 @@ public class Transporter : IUpdatable
         }
         else
         {
-            foreach (var item in Carrying) { task.Destination.ReceiveImport(item.Resource, item.Amount); }
-
-            Log += $"[Tick {tick}] Delivered {string.Join(", ", Carrying)}\n";
-            Carrying.Clear();
+            foreach (var item in Carrying) //we shouldn't be iterating through what it's carrying, but what it's current task is and delivering as many as possible
+            {
+                var amountToTransfer = _currentTask.Cargo.FirstOrDefault(x => x.Resource == item.Resource)?.Amount;
+                if (amountToTransfer is null) { continue; } // No need to transfer this item
+                if (item.Amount < amountToTransfer) { amountToTransfer = item.Amount; }
+                task.Destination.ReceiveImport(item.Resource, amountToTransfer.Value);
+                Log += $"[Tick {tick}] Delivered {item.Amount} x {item.Resource.Id} to {task.Destination.Position}\n";
+                item.Amount -= amountToTransfer.Value;
+            }
+            Carrying.RemoveAll(item => item.Amount == 0);
             _currentTask = null;
             _target = null;
         }

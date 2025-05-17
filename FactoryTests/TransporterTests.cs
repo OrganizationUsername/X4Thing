@@ -224,4 +224,45 @@ public class TransporterTests
         Assert.Contains("Delivered", transporter.Log);
     }
 
+
+    [Fact]
+    public void Transporter_RespectsVolumeLimit_WhenPickingUp()
+    {
+        var gameData = GameData.GetDefault();
+        var metalBar = gameData.GetResource("metal_bar"); // Volume = 1.5f
+
+        // Source facility has 500 metal bars
+        var sourceStorage = new ResourceStorage();
+        sourceStorage.Add(metalBar, 500);
+        var source = new ProductionFacility(sourceStorage, []) { Position = new Vector2(0, 0) };
+
+        var destStorage = new ResourceStorage();
+        var dest = new ProductionFacility(destStorage, []) { Position = new Vector2(5, 0) };
+
+        // Transporter has very small volume capacity
+        var transporter = new Transporter
+        {
+            Position = new Vector2(0, 0),
+            SpeedPerTick = 5f,
+            MaxVolume = 10f, // Can carry up to 6 metal bars (6 x 1.5 = 9.0)
+        };
+
+        transporter.AssignTask(source, dest, [new ResourceAmount(metalBar, 500)]);
+
+        var ticker = new Ticker();
+        ticker.Register(transporter);
+        ticker.Register(dest);
+
+        ticker.RunTicks(3); // Tick 1: pickup, Tick 2-3: movement & delivery
+
+        // Only 6 bars should be picked up and delivered
+        Assert.Equal(6, destStorage.GetAmount(metalBar));
+        Assert.Empty(transporter.Carrying);
+        Assert.DoesNotContain("Failed", transporter.Log);
+        Assert.Contains("Delivered", transporter.Log);
+
+        // Confirm that source has 494 left
+        Assert.Equal(494, sourceStorage.GetAmount(metalBar));
+    }
+
 }
