@@ -1,5 +1,4 @@
 ﻿using System.Numerics;
-using JetBrains.Annotations;
 
 namespace FactoryCli;
 
@@ -8,7 +7,7 @@ public class ProductionFacility : IUpdatable, IHasName
     private readonly ResourceStorage _storage;
     private readonly Dictionary<Recipe, int> _workshops;
     private readonly Dictionary<Recipe, List<ProductionJob>> _activeJobs;
-    public int PlayerId { get; set; } = 0;
+    public int PlayerId { get; set; } = 0; //for factionId later
     public int Id { get; set; } = 0;
     public string Name { get; set; } = "Production";
     public List<ILogLine> LogLines { get; } = [];
@@ -28,17 +27,17 @@ public class ProductionFacility : IUpdatable, IHasName
         }
     }
 
-    public bool TryExport(Resource res, int amountToTake, int tick, Transporter receiver)
-    {
-        return _storage.Consume(res, amountToTake);
-    }
+    public ResourceStorage GetStorage() => _storage;
+    public Dictionary<Recipe, int> GetWorkshops() => _workshops;
+    public IPullRequestStrategy PullRequestStrategy { get; set; } = new DefaultPullRequestStrategy();
+
+    public bool TryExport(Resource res, int amountToTake, int tick, Transporter receiver) => _storage.Consume(res, amountToTake);
 
     public void ReceiveImport(Resource res, int amountToTransfer, int tick, Transporter transporter)
     {
         LogLines.Add(new TransportReceivedLog(tick, Id, res.Id, amountToTransfer, Position, transporter));
         _storage.Add(res, amountToTransfer);
     }
-
 
     public void AddWorkshops(Recipe recipe, int count)
     {
@@ -49,7 +48,6 @@ public class ProductionFacility : IUpdatable, IHasName
 
     public void Tick(int currentTick)
     {
-        var tempLog = new List<string>();
 
         foreach (var (recipe, jobs) in _activeJobs)
         {
@@ -61,15 +59,11 @@ public class ProductionFacility : IUpdatable, IHasName
                 var job = jobs[i];
                 job.Elapsed++;
 
-                //tempLog.Add($"  Job for {output.Id} ticked to {job.Elapsed}/{recipe.Duration}");
+                if (job.Elapsed < recipe.Duration) { continue; }
 
-                if (job.Elapsed >= recipe.Duration)
-                {
-                    _storage.Add(output, recipe.OutputAmount);
-                    jobs.RemoveAt(i);
-                    tempLog.Add($"  Completed job for {output.Id}, output added to storage");
-                    LogLines.Add(new ProductionCompletedLog(currentTick, Id, output.Id, recipe.OutputAmount, Position));
-                }
+                _storage.Add(output, recipe.OutputAmount);
+                jobs.RemoveAt(i);
+                LogLines.Add(new ProductionCompletedLog(currentTick, Id, output.Id, recipe.OutputAmount, Position));
             }
 
             // Step 2: Start new jobs
@@ -80,7 +74,6 @@ public class ProductionFacility : IUpdatable, IHasName
                 {
                     ConsumeInputs(recipe.Inputs);
                     jobs.Add(new ProductionJob());
-                    tempLog.Add($"  Started job for {output.Id} (duration: {recipe.Duration})");
                     LogLines.Add(new ProductionStartedLog(currentTick, Id, output.Id, recipe.Duration, Position));
                 }
                 else { break; }
@@ -98,10 +91,7 @@ public class ProductionFacility : IUpdatable, IHasName
 
     private void ConsumeInputs(Dictionary<Resource, int> inputs)
     {
-        foreach (var (resource, amount) in inputs)
-        {
-            _storage.Consume(resource, amount);
-        }
+        foreach (var (resource, amount) in inputs) { _storage.Consume(resource, amount); }
     }
 
 
@@ -112,12 +102,11 @@ public class ProductionFacility : IUpdatable, IHasName
 
     public IEnumerable<(Resource resource, int amount)> GetPushOffers()
     {
-        // Collect all input resources used by this facility’s recipes
         var inputResources = _workshops.Keys
             .SelectMany(recipe => recipe.Inputs.Keys)
             .ToHashSet();
 
-        // Only offer to push resources not used as inputs, for now. 
+        // Only offer to push resources not used as inputs, for now. Later I'll have another strategy that allows me to figure out what to give up.
         foreach (var (res, amount) in _storage.GetAll())
         {
             if (!inputResources.Contains(res) && amount > 0)
@@ -127,18 +116,15 @@ public class ProductionFacility : IUpdatable, IHasName
         }
     }
 
-    public IEnumerable<(Resource resource, int amount)> GetPullRequests() //maybe this should take in a number of ticks. For example: we can say that we want to send a transport to satisfy it for 500 ticks.
+    public IEnumerable<(Resource resource, int amount)> GetPullRequests()
     {
-        //We can also look for an imbalance in resources.
-        foreach (var (recipe, _) in _workshops)
-        {
-            foreach (var input in recipe.Inputs)
-            {
-                var current = _storage.GetAmount(input.Key);
-                if (current < input.Value) { yield return (input.Key, input.Value - current); }
-            }
-        }
+        var result = PullRequestStrategy.GetRequests(this).ToList();
+        LastRequests = result.Select(r => new ResourceRequest(r.resource, r.amount)).ToList();
+        return result;
     }
+
+    public List<ResourceRequest> LastRequests { get; set; } = [];
+
 
     public int? GetTicksUntilNextEvent()
     {
@@ -155,19 +141,31 @@ public class ProductionFacility : IUpdatable, IHasName
         }
         return soonestCompletion;
     }
+}
 
-
+public class ResourceRequest(Resource resource, int amount)
+{
+    public Resource Resource { get; } = resource;
+    public int Amount { get; } = amount;
 }
 
 public class ResourceStorage
 {
     private readonly Dictionary<Resource, int> _resources = new();
+    private readonly Dictionary<Resource, int> _incoming = new();
+
     public Dictionary<Resource, int> GetAll() => new(_resources);
 
     public void Add(Resource type, int amount)
     {
         _resources.TryAdd(type, 0);
         _resources[type] += amount;
+
+        if (!_incoming.TryGetValue(type, out var incomingAmt)) { return; }
+
+        var deduction = Math.Min(amount, incomingAmt);
+        _incoming[type] -= deduction;
+        if (_incoming[type] <= 0) { _incoming.Remove(type); }
     }
 
     public bool Consume(Resource type, int amount)
@@ -178,5 +176,14 @@ public class ResourceStorage
         return true;
     }
 
+    public void MarkIncoming(Resource type, int amount)
+    {
+        _incoming.TryAdd(type, 0);
+        _incoming[type] += amount;
+    }
+
+    public int GetTotalIncludingIncoming(Resource type) => GetAmount(type) + GetIncomingAmount(type);
+
     public int GetAmount(Resource type) => _resources.GetValueOrDefault(type, 0);
+    public int GetIncomingAmount(Resource type) => _incoming.GetValueOrDefault(type, 0);
 }

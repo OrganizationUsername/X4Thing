@@ -86,6 +86,16 @@ public class TransportSplitLog(int tick, int transporterId, List<ResourceAmount>
     public string Format() => $"[Tick {Tick:D4}] Transporter {TransporterId} split delivery: now={string.Join(", ", AssignedNow)}, remaining={string.Join(", ", Remaining)}";
 }
 
+public class DeliveryPartialLog(int tick, int transporterId, List<ResourceAmount> partial, ProductionFacility pf) : ILogLine, ITransporterLog
+{
+    public int Tick { get; } = tick;
+    public int TransporterId { get; } = transporterId;
+    public List<ResourceAmount> Partial { get; } = partial;
+    public ProductionFacility Facility { get; } = pf;
+    public string Format() => $"[Tick {Tick:D4}] Transporter {TransporterId} partially delivered: {string.Join(", ", Partial)} to {Facility.Name}";
+}
+
+
 public class DeliveryFailedLog(int tick, int transporterId, List<ResourceAmount> failed, ProductionFacility pf) : ILogLine, ITransporterLog
 {
     public int Tick { get; } = tick;

@@ -90,78 +90,98 @@ public class Transporter : IUpdatable, IHasName
             _distanceTraveled += SpeedPerTick;
             return;
         }
-        else
+
+        _distanceTraveled += distance;
+        Position = _target.Value;
+        _target = null;
+
+        if (!task.HasPickedUp) { PickUp(tick, task); }
+        else { Deliver(tick, task); }
+    }
+
+    private void PickUp(int tick, TransportTask task)
+    {
+        var usedVolume = Carrying.Sum(c => c.Resource.Volume * c.Amount);
+        var remainingVolume = MaxVolume - usedVolume;
+
+        foreach (var item in task.Cargo)
         {
-            _distanceTraveled += distance;
-            Position = _target.Value;
-            _target = null;
+            var volumePerUnit = item.Resource.Volume;
+            if (volumePerUnit <= 0) continue;
+
+            var maxUnits = (int)(remainingVolume / volumePerUnit);
+            if (maxUnits == 0) break;
+
+            var amountToTake = Math.Min(item.Amount, maxUnits);
+
+            if (amountToTake > 0 && task.Source.TryExport(item.Resource, amountToTake, tick, this))
+            {
+                var existing = Carrying.FirstOrDefault(x => x.Resource == item.Resource);
+                if (existing != null) { existing.Amount += amountToTake; }
+                else { Carrying.Add(new ResourceAmount(item.Resource, amountToTake)); }
+                remainingVolume -= amountToTake * volumePerUnit;
+
+                LogLines.Add(new PickupLog(tick, Id, [new ResourceAmount(item.Resource, amountToTake),], _currentTask.Source));
+            }
+            else
+            {
+                LogLines.Add(new TransportAssignedLog(tick, Id, item.Resource.Id, item.Amount, task.Source, task.Destination));
+            }
+        }
+        task.HasPickedUp = true;
+        _target = task.Destination.Position;
+    }
+
+    private void Deliver(int tick, TransportTask task)
+    {
+        // Keep track of which items were NOT delivered in full
+        var failed = new List<ResourceAmount>();
+
+        // Track items that were successfully delivered
+        var actualDelivered = new List<ResourceAmount>();
+
+        // Loop over all the resources this task is supposed to deliver
+        foreach (var taskItem in task.Cargo)
+        {
+            // Try to find this resource in the transporter’s current inventory
+            var carried = Carrying.FirstOrDefault(c => c.Resource == taskItem.Resource);
+
+            // If not found, assume it has 0 available
+            var available = carried?.Amount ?? 0;
+
+            // We'll deliver as much as we can, up to the requested amount
+            var toDeliver = Math.Min(available, taskItem.Amount);
+
+            // If we can deliver anything at all
+            if (toDeliver > 0)
+            {
+                // Send it to the destination facility
+                task.Destination.ReceiveImport(taskItem.Resource, toDeliver, tick, this);
+
+                // Log the successful delivery
+                actualDelivered.Add(new ResourceAmount(taskItem.Resource, toDeliver));
+                LogLines.Add(new DeliveryLog(tick, Id, task.Destination.Position, [new(taskItem.Resource, toDeliver)]));
+
+                carried!.Amount -= toDeliver; // Subtract the delivered amount from what the transporter is carrying
+            }
+            if (toDeliver >= taskItem.Amount) { continue; } // If we couldn't deliver the full requested amount, record what was missing
+
+            var shortfall = taskItem.Amount - toDeliver;
+            failed.Add(new ResourceAmount(taskItem.Resource, shortfall));
         }
 
-        if (!task.HasPickedUp)
+        if (actualDelivered.Count == 0 && failed.Count > 0) // Decide which failure log to write, if any
         {
-            var usedVolume = Carrying.Sum(c => c.Resource.Volume * c.Amount);
-            var remainingVolume = MaxVolume - usedVolume;
-
-            foreach (var item in task.Cargo)
-            {
-                var volumePerUnit = item.Resource.Volume;
-                if (volumePerUnit <= 0) continue;
-
-                var maxUnits = (int)(remainingVolume / volumePerUnit);
-                if (maxUnits == 0) break;
-
-                var amountToTake = Math.Min(item.Amount, maxUnits);
-
-                if (amountToTake > 0 && task.Source.TryExport(item.Resource, amountToTake, tick, this))
-                {
-                    var existing = Carrying.FirstOrDefault(x => x.Resource == item.Resource);
-                    if (existing != null) { existing.Amount += amountToTake; }
-                    else { Carrying.Add(new ResourceAmount(item.Resource, amountToTake)); }
-                    remainingVolume -= amountToTake * volumePerUnit;
-
-                    LogLines.Add(new PickupLog(tick, Id, [new ResourceAmount(item.Resource, amountToTake),], _currentTask.Source));
-                }
-                else
-                {
-                    LogLines.Add(new TransportAssignedLog(tick, Id, item.Resource.Id, item.Amount, task.Source, task.Destination));
-                }
-            }
-            task.HasPickedUp = true;
-            _target = task.Destination.Position;
+            LogLines.Add(new DeliveryFailedLog(tick, Id, failed, task.Destination)); // Entire delivery failed — none of the cargo was delivered
         }
-        else
+        else if (actualDelivered.Count > 0 && failed.Count > 0)
         {
-            var failed = new List<ResourceAmount>();
-
-            foreach (var taskItem in task.Cargo)
-            {
-                var carried = Carrying.FirstOrDefault(c => c.Resource == taskItem.Resource);
-                var available = carried?.Amount ?? 0;
-                var toDeliver = Math.Min(available, taskItem.Amount);
-
-                if (toDeliver > 0)
-                {
-                    task.Destination.ReceiveImport(taskItem.Resource, toDeliver, tick, this);
-                    LogLines.Add(new DeliveryLog(tick, Id, task.Destination.Position, [new(taskItem.Resource, toDeliver)]));
-                    carried!.Amount -= toDeliver;
-                }
-
-                if (toDeliver < taskItem.Amount)
-                {
-                    failed.Add(new ResourceAmount(taskItem.Resource, taskItem.Amount - toDeliver));
-                }
-            }
-
-            if (failed.Count > 0)
-            {
-                LogLines.Add(new DeliveryFailedLog(tick, Id, failed, task.Destination));
-            }
-
-            Carrying.RemoveAll(item => item.Amount == 0);
-            _currentTask = null;
-            _target = null;
-
+            LogLines.Add(new DeliveryPartialLog(tick, Id, failed, task.Destination)); // Partial delivery — some of the items were delivered, some were not
         }
+
+        Carrying.RemoveAll(item => item.Amount == 0); // Clean up inventory — remove any resource entries with 0 quantity left
+        _currentTask = null; // Clear the current task and target so the transporter can move on
+        _target = null;
     }
 }
 

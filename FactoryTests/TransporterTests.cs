@@ -819,7 +819,7 @@ public class TransporterTests
         var transporter = new Transporter { Position = new Vector2(0, 0), SpeedPerTick = 1f, MaxVolume = 10f, Id = 101, };
 
         // Use NewAssignTask instead of AssignTask
-        transporter.NewAssignTask(source, dest, [new ResourceAmount(metalBar, 3),], currentTick: 0);
+        transporter.AssignTask(source, dest, [new ResourceAmount(metalBar, 3),], currentTick: 0);
 
         // Sneak plastic into inventory before delivery (simulate weird state)
         transporter.Carrying.Add(new ResourceAmount(plastic, 1));
