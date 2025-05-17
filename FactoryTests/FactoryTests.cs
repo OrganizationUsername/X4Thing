@@ -7,14 +7,13 @@ public class FactoryTests
     [Fact]
     public void ProductionFacility_DoesNotStartJobs_WhenResourcesAreInsufficient()
     {
-        // Arrange
         var gameData = new GameData();
         var metalBar = gameData.GetResource("metal_bar");
         var recipe = gameData.Recipes.Values.First(r => r.Output == metalBar);
 
         var storage = new ResourceStorage(); // No inputs
 
-        var facility = new ProductionFacility(storage, new Dictionary<RecipeDef, int>
+        var facility = new ProductionFacility(storage, new Dictionary<Recipe, int>
         {
             { recipe, 1 }, // One workshop for MetalBar production
         });
@@ -22,10 +21,7 @@ public class FactoryTests
         var ticker = new Ticker();
         ticker.Register(facility);
 
-        // Act
         ticker.RunTicks(20); // Run enough ticks to see if any job starts
-
-        // Assert
         Assert.Equal(0, storage.GetAmount(metalBar)); // No MetalBar should be produced
     }
 
@@ -42,7 +38,7 @@ public class FactoryTests
         storage.Add(ore, 4);        // Enough for 2 jobs
         storage.Add(energy, 1);     // Only enough for 1 job
 
-        var facility = new ProductionFacility(storage, new Dictionary<RecipeDef, int>
+        var facility = new ProductionFacility(storage, new Dictionary<Recipe, int>
         {
             { recipe, 5 }, // 5 workshops, but resources restrict to 1 job
         });
@@ -76,7 +72,7 @@ public class FactoryTests
         storage.Add(flour, 1);
         storage.Add(wheat, 2);
 
-        var facility = new ProductionFacility(storage, new Dictionary<RecipeDef, int>
+        var facility = new ProductionFacility(storage, new Dictionary<Recipe, int>
         {
             { metalBarRecipe, 1 },
             { breadRecipe, 1 },
@@ -104,7 +100,7 @@ public class FactoryTests
         storage.Add(ore, 2);
         storage.Add(energy, 1);
 
-        var facility = new ProductionFacility(storage, new Dictionary<RecipeDef, int>
+        var facility = new ProductionFacility(storage, new Dictionary<Recipe, int>
         {
             { recipe, 1 },
         });
@@ -138,7 +134,7 @@ public class FactoryTests
         storage.Add(ore, 10);         // Enough for 5 jobs
         storage.Add(energy, 5);       // Enough for 5 jobs
 
-        var facility = new ProductionFacility(storage, new Dictionary<RecipeDef, int>
+        var facility = new ProductionFacility(storage, new Dictionary<Recipe, int>
         {
             { recipe, 2 }, // Two workshops = two jobs in parallel
         });
@@ -175,7 +171,7 @@ public class FactoryTests
         storage.Add(ore, 4);
         storage.Add(energy, 2);
 
-        var facility = new ProductionFacility(storage, new Dictionary<RecipeDef, int>
+        var facility = new ProductionFacility(storage, new Dictionary<Recipe, int>
         {
             { metalBarRecipe, 2 },
             { breadRecipe, 1 },
@@ -214,7 +210,7 @@ public class FactoryTests
         var recipe = gameData.Recipes.Values.First(r => r.Output == metalBar);
 
         var storage = new ResourceStorage();
-        var facility = new ProductionFacility(storage, new Dictionary<RecipeDef, int>
+        var facility = new ProductionFacility(storage, new Dictionary<Recipe, int>
         {
             { recipe, 1 },
         });
@@ -271,7 +267,7 @@ public class FactoryTests
         storage.Add(ore, 2);
         storage.Add(energy, 1);
 
-        var facility = new ProductionFacility(storage, new Dictionary<RecipeDef, int>
+        var facility = new ProductionFacility(storage, new Dictionary<Recipe, int>
         {
             { metalBarRecipe, 1 },
             { computerPartRecipe, 1 },
@@ -313,7 +309,7 @@ public class FactoryTests
         storage.Add(energy, 1);
 
         // No workshops yet
-        var facility = new ProductionFacility(storage, new Dictionary<RecipeDef, int>());
+        var facility = new ProductionFacility(storage, new Dictionary<Recipe, int>());
 
         var ticker = new Ticker();
         ticker.Register(facility);
@@ -354,7 +350,7 @@ public class FactoryTests
         storage.Add(ore, 2);
         storage.Add(energy, 1);
 
-        var facility = new ProductionFacility(storage, new Dictionary<RecipeDef, int>());
+        var facility = new ProductionFacility(storage, new Dictionary<Recipe, int>());
 
         var ticker = new Ticker();
         ticker.Register(facility);
@@ -407,7 +403,7 @@ public class FactoryTests
         var storageA = new ResourceStorage();
         storageA.Add(ore, 2);
         storageA.Add(energy, 1);
-        var stationA = new ProductionFacility(storageA, new Dictionary<RecipeDef, int>
+        var stationA = new ProductionFacility(storageA, new Dictionary<Recipe, int>
         {
             { metalBarRecipe, 1 },
         });
@@ -416,7 +412,7 @@ public class FactoryTests
         var storageB = new ResourceStorage();
         storageB.Add(plastic, 1);
         storageB.Add(metalBar, 1); // Preloaded to simulate partial progress
-        var stationB = new ProductionFacility(storageB, new Dictionary<RecipeDef, int>
+        var stationB = new ProductionFacility(storageB, new Dictionary<Recipe, int>
         {
             { computerPartRecipe, 1 },
         });

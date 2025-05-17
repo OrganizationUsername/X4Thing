@@ -11,7 +11,7 @@ public class TickerTests
         var gameData = new GameData();
         var storage = new ResourceStorage();
 
-        var facility = new ProductionFacility(storage, new Dictionary<RecipeDef, int>()); // No workshops
+        var facility = new ProductionFacility(storage, new Dictionary<Recipe, int>()); // No workshops
 
         Assert.Null(facility.GetTicksUntilNextEvent());
     }
@@ -28,7 +28,7 @@ public class TickerTests
         storage.Add(ore, 2);
         storage.Add(energy, 1);
 
-        var facility = new ProductionFacility(storage, new Dictionary<RecipeDef, int>
+        var facility = new ProductionFacility(storage, new Dictionary<Recipe, int>
         {
             { recipe, 1 }
         });
@@ -48,7 +48,7 @@ public class TickerTests
         storage.Add(ore, 2);
         storage.Add(energy, 1);
 
-        var facility = new ProductionFacility(storage, new Dictionary<RecipeDef, int>
+        var facility = new ProductionFacility(storage, new Dictionary<Recipe, int>
         {
             { recipe, 1 }
         });
@@ -78,7 +78,7 @@ public class TickerTests
         storage.Add(ore, 8);
         storage.Add(energy, 4);
 
-        var facility = new ProductionFacility(storage, new Dictionary<RecipeDef, int>
+        var facility = new ProductionFacility(storage, new Dictionary<Recipe, int>
         {
             { recipe, 2 }
         });
@@ -101,7 +101,7 @@ public class TickerTests
         var recipe = gameData.Recipes.Values.First(r => r.Output == metalBar);
 
         var storage = new ResourceStorage();
-        var facility = new ProductionFacility(storage, new Dictionary<RecipeDef, int>
+        var facility = new ProductionFacility(storage, new Dictionary<Recipe, int>
         {
             { recipe, 1 }
         });
