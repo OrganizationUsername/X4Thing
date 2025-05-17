@@ -3,13 +3,14 @@ using JetBrains.Annotations;
 
 namespace FactoryCli;
 
-public class ProductionFacility : IUpdatable
+public class ProductionFacility : IUpdatable, IHasName
 {
     private readonly ResourceStorage _storage;
     private readonly Dictionary<Recipe, int> _workshops;
     private readonly Dictionary<Recipe, List<ProductionJob>> _activeJobs;
     public int PlayerId { get; set; } = 0;
     public int Id { get; set; } = 0;
+    public string Name { get; set; } = "Production";
     public List<string> DebugLog { get; } = []; //ToDo: Make another log that is `List<(int tick, string log)>` so I can sort it by tick and see what happened at a certain time. Maybe not `string log`, though. Maybe it's a structured type that's easier to query.
 
     public Vector2 Position { get; set; } = new(0, 0);
@@ -27,9 +28,17 @@ public class ProductionFacility : IUpdatable
         }
     }
 
-    public bool TryExport(Resource res, int amt) => _storage.Consume(res, amt);
-    public void ReceiveImport(Resource res, int amt) => _storage.Add(res, amt);
+    public bool TryExport(Resource res, int amountToTake, int tick, IHasName receiver)
+    {
+        DebugLog.Add($"[Tick {tick}] Exporting {amountToTake} of {res.Id} to {receiver.Name}");
+        return _storage.Consume(res, amountToTake);
+    }
 
+    public void ReceiveImport(Resource res, int amountToTransfer, int tick, IHasName giver)
+    {
+        DebugLog.Add($"[Tick {tick}] Received {amountToTransfer} of {res.Id} from {giver.Name}");
+        _storage.Add(res, amountToTransfer);
+    }
 
     [UsedImplicitly] public string GetDebugLog() => string.Join(Environment.NewLine, DebugLog);
 
@@ -54,7 +63,7 @@ public class ProductionFacility : IUpdatable
                 var job = jobs[i];
                 job.Elapsed++;
 
-                tempLog.Add($"  Job for {output.Id} ticked to {job.Elapsed}/{recipe.Duration}");
+                //tempLog.Add($"  Job for {output.Id} ticked to {job.Elapsed}/{recipe.Duration}");
 
                 if (job.Elapsed >= recipe.Duration)
                 {
@@ -107,30 +116,20 @@ public class ProductionFacility : IUpdatable
         public int Elapsed;
     }
 
-    public IEnumerable<(Resource resource, int amount)> GetPushOffers() //A better way of doing this is to identify everything that's not an input.
+    public IEnumerable<(Resource resource, int amount)> GetPushOffers()
     {
-        var reservedInputs = new Dictionary<Resource, int>();
+        // Collect all input resources used by this facility’s recipes
+        var inputResources = _workshops.Keys
+            .SelectMany(recipe => recipe.Inputs.Keys)
+            .ToHashSet();
 
-        // Calculate how many units each input resource might need
-        foreach (var (recipe, workshopCount) in _workshops)
+        // Only offer to push resources not used as inputs, for now. 
+        foreach (var (res, amount) in _storage.GetAll())
         {
-            var jobsRunning = _activeJobs[recipe].Count;
-            var jobsToStart = workshopCount - jobsRunning;
-
-            foreach (var (input, requiredAmount) in recipe.Inputs)
+            if (!inputResources.Contains(res) && amount > 0)
             {
-                reservedInputs.TryAdd(input, 0);
-                reservedInputs[input] += requiredAmount * jobsToStart;
+                yield return (res, amount);
             }
-        }
-
-        // Now compare actual storage to what’s needed
-        foreach (var (res, actual) in _storage.GetAll())
-        {
-            var reserved = reservedInputs.GetValueOrDefault(res, 0);
-            var excess = actual - reserved;
-
-            if (excess > 0) { yield return (res, excess); }
         }
     }
 
@@ -162,6 +161,8 @@ public class ProductionFacility : IUpdatable
         }
         return soonestCompletion;
     }
+
+
 }
 
 public class ResourceStorage

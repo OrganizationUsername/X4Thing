@@ -273,12 +273,12 @@ public class TransporterTests
 
         var sourceStorage = new ResourceStorage();
         sourceStorage.Add(metalBar, 100);
-        var source = new ProductionFacility(sourceStorage, []) { Position = new Vector2(0, 0), };
+        var source = new ProductionFacility(sourceStorage, []) { Position = new Vector2(0, 0), Id = 1, };
 
         var destStorage = new ResourceStorage();
         var recipe = gameData.GetRecipe("recipe_computer_part");
-        var dest = new ProductionFacility(destStorage, new Dictionary<Recipe, int> { { recipe, 1 }, }) { Position = new Vector2(5, 0), };
-        var transporter = new Transporter { Position = new Vector2(0, 0), SpeedPerTick = 5f, MaxVolume = 10f, };
+        var dest = new ProductionFacility(destStorage, new Dictionary<Recipe, int> { { recipe, 1 }, }) { Position = new Vector2(5, 0), Id = 2, };
+        var transporter = new Transporter { Position = new Vector2(0, 0), SpeedPerTick = 5f, MaxVolume = 10f, Id = 3, };
 
         gameData.Facilities.Add(source);
         gameData.Facilities.Add(dest);
@@ -314,6 +314,136 @@ public class TransporterTests
         Assert.DoesNotContain("Failed", transporter.Log); // Sanity check: No failures
     }
 
+    [Fact]
+    public void Transporter_AutoDelivers_ProducedMetalBar_ToConsumerFacility()
+    {
+        var gameData = GameData.GetDefault();
+        var ore = gameData.GetResource("ore");
+        var energy = gameData.GetResource("energy_cell");
+        var plastic = gameData.GetResource("plastic");
 
+        // --- Source produces metal bars
+        var sourceStorage = new ResourceStorage();
+        sourceStorage.Add(ore, 200);
+        sourceStorage.Add(energy, 100);
+        var metalBarRecipe = gameData.GetRecipe("recipe_metal_bar");
+        var source = new ProductionFacility(sourceStorage, new Dictionary<Recipe, int> { { metalBarRecipe, 2 }, }) { Position = new Vector2(0, 0), };
 
+        // --- Destination needs metal bars to build computer parts
+        var destStorage = new ResourceStorage();
+        destStorage.Add(plastic, 10); // Already has plastic
+        var computerRecipe = gameData.GetRecipe("recipe_computer_part");
+        var dest = new ProductionFacility(destStorage, new Dictionary<Recipe, int> { { computerRecipe, 1 }, }) { Position = new Vector2(5, 0), };
+
+        var transporter = new Transporter { Position = new Vector2(0, 0), SpeedPerTick = 5f, MaxVolume = 10f, };
+
+        gameData.Facilities.Add(source);
+        gameData.Facilities.Add(dest);
+        gameData.Transporters.Add(transporter);
+
+        var ticker = new Ticker { GameData = gameData, };
+        ticker.Register(source);
+        ticker.Register(dest);
+        ticker.Register(transporter);
+
+        // Run ticks: produce metal bars, assign, transport, deliver, use in computer part
+        ticker.RunTicks(25);
+
+        // Expect at least one computer part produced
+        Assert.True(destStorage.GetAmount(gameData.GetResource("computer_part")) > 0, "Computer part was not produced.");
+        Assert.Contains("Enqueued", transporter.Log);
+        Assert.Contains("Picked up", transporter.Log);
+        Assert.Contains("Delivered", transporter.Log);
+        Assert.DoesNotContain("Failed", transporter.Log);
+    }
+
+    [Fact]
+    public void Transporter_AutoDelivers_ProducedMetalBar_ToConsumerFacility_WithSteps()
+    {
+        var gameData = GameData.GetDefault();
+        var ore = gameData.GetResource("ore");
+        var energy = gameData.GetResource("energy_cell");
+        var metalBar = gameData.GetResource("metal_bar");
+        var plastic = gameData.GetResource("plastic");
+        var computerPart = gameData.GetResource("computer_part");
+
+        var sourceStorage = new ResourceStorage(); // --- Source will produce metal bars
+        sourceStorage.Add(ore, 200);
+        sourceStorage.Add(energy, 100);
+        var metalBarRecipe = gameData.GetRecipe("recipe_metal_bar");
+        var source = new ProductionFacility(sourceStorage, new Dictionary<Recipe, int> { { metalBarRecipe, 2 }, }) { Position = new Vector2(0, 0), Name = "Source", };
+
+        var destStorage = new ResourceStorage(); // --- Destination will request metal bars
+        destStorage.Add(plastic, 10); // Only has plastic
+        var computerRecipe = gameData.GetRecipe("recipe_computer_part");
+        var dest = new ProductionFacility(destStorage, new Dictionary<Recipe, int> { { computerRecipe, 1 }, }) { Position = new Vector2(5, 0), Name = "Destination", };
+
+        var transporter = new Transporter { Position = new Vector2(5, 0), SpeedPerTick = 1f, MaxVolume = 10f, };
+
+        gameData.Facilities.Add(source);
+        gameData.Facilities.Add(dest);
+        gameData.Transporters.Add(transporter);
+
+        var ticker = new Ticker { GameData = gameData, };
+        ticker.Register(source);
+        ticker.Register(dest);
+        ticker.Register(transporter);
+
+        // --- Tick 1–10: Metal bars should be produced
+        ticker.RunTicks(11);
+        var sourceText = source.GetDebugLog();
+        /*
+           [Tick 1]
+             Started job for metal_bar (duration: 10)
+             Started job for metal_bar (duration: 10)
+           [Tick 11]
+             Completed job for metal_bar, output added to storage
+             Completed job for metal_bar, output added to storage
+             Started job for metal_bar (duration: 10)
+             Started job for metal_bar (duration: 10)
+         */
+        Assert.Contains("Completed job for metal_bar", sourceText);
+
+        // --- Tick 11–12: Transporter should be assigned and pick up
+        ticker.RunTicks(2);
+        Assert.Contains("Enqueued", transporter.Log);
+        ticker.RunTicks(2);
+
+        Assert.Contains("Picked up", transporter.Log);
+        /*
+            [Tick 11] Enqueued transport: 2 x metal_bar from <0, 0> to <5, 0>
+            [Tick 11] Picked up 2 x metal_bar
+            [Tick 12] Delivered 2 x metal_bar to <5, 0>
+         */
+        Assert.True(transporter.Carrying.Any(x => x.Resource == metalBar), "Transporter not carrying metal bars after pickup");
+
+        // --- Tick 13: Delivery happens
+        ticker.RunTicks(5);
+        Assert.Contains("Delivered", transporter.Log);
+        /*
+            [Tick 11] Enqueued transport: 2 x metal_bar from Source (<0, 0>) to Destination(<5, 0>)
+            [Tick 15] Picked up 2 x metal_bar
+         */
+        Assert.True(destStorage.GetAmount(metalBar) > 0, "Metal bars were not delivered to dest facility");
+
+        // --- Tick 14–23: Job for computer part starts & progresses
+        var preCount = destStorage.GetAmount(computerPart);
+        ticker.RunTicks(11);
+        var postCount = destStorage.GetAmount(computerPart);
+        var destinationLogs = dest.GetDebugLog();
+        /*
+            [Tick 20] Received 2 of metal_bar from Transporter
+            [Tick 21]
+                Started job for computer_part (duration: 10)
+            [Tick 30] Received 2 of metal_bar from Transporter
+            [Tick 31]
+                Completed job for computer_part, output added to storage
+                Started job for computer_part (duration: 10)         
+         */
+        Assert.True(postCount > preCount, $"Expected computer_part to increase after job completes. Before: {preCount}, After: {postCount}");
+
+        // --- Final checks
+        Assert.DoesNotContain("Failed", transporter.Log);
+        Assert.Empty(transporter.Carrying);
+    }
 }

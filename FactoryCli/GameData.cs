@@ -28,10 +28,10 @@ public class GameData : IUpdatable
 
     public void Tick(int currentTick)
     {
-        AssignTransportersToBestTrades();
+        AssignTransportersToBestTrades(currentTick);
     }
 
-    public void AssignTransportersToBestTrades()
+    public void AssignTransportersToBestTrades(int currentTick)
     {
         foreach (var transporter in Transporters.Where(t => !t.HasActiveTask()))
         {
@@ -45,7 +45,7 @@ public class GameData : IUpdatable
             if (maxAmount <= 0) continue;
 
             var toSend = Math.Min(amount, maxAmount);
-            transporter.AssignTask(from, to, [new ResourceAmount(resource, toSend)]);
+            transporter.AssignTask(from, to, [new ResourceAmount(resource, toSend)], currentTick);
         }
     }
 

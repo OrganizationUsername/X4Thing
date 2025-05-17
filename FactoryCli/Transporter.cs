@@ -2,13 +2,17 @@
 
 namespace FactoryCli;
 
-public class Transporter : IUpdatable
+
+
+
+public class Transporter : IUpdatable, IHasName
 {
     public Vector2 Position { get; set; }
     public float SpeedPerTick { get; set; } = 1f;
     public string Log { get; private set; } = ""; //probably replace this with List<string>
     public int PlayerId { get; set; } = 0;
     public int Id { get; set; } = 0;
+    public string Name { get; set; } = "Transporter";
     public float MaxVolume { get; set; } = 10f;
     //ToDo: maybe make it so they have a bulk volume and a container volume, that way they can carry a bunch of asteroids but fewer finished/containerized goods
 
@@ -20,11 +24,11 @@ public class Transporter : IUpdatable
 
     public bool HasActiveTask() => _currentTask != null || _taskQueue.Count > 0;
 
-    public void AssignTask(ProductionFacility from, ProductionFacility to, List<ResourceAmount> cargo)
+    public void AssignTask(ProductionFacility from, ProductionFacility to, List<ResourceAmount> cargo, int? currentTick = null)
     {
         var task = new TransportTask(from, to, cargo);
         _taskQueue.Enqueue(task);
-        Log += $"Enqueued transport: {string.Join(", ", cargo)} from {from.Position} to {to.Position}\n";
+        Log += $"{(currentTick is not null ? $"[Tick {currentTick}] " : "")}Enqueued transport: {string.Join(", ", cargo)} from {from.Name} ({from.Position}) to {to.Name}({to.Position})\n";
     }
 
     public void Tick(int tick)
@@ -66,7 +70,7 @@ public class Transporter : IUpdatable
 
                 var amountToTake = Math.Min(item.Amount, maxUnits);
 
-                if (amountToTake > 0 && task.Source.TryExport(item.Resource, amountToTake))
+                if (amountToTake > 0 && task.Source.TryExport(item.Resource, amountToTake, tick, this))
                 {
                     var existing = Carrying.FirstOrDefault(x => x.Resource == item.Resource);
                     if (existing != null) { existing.Amount += amountToTake; }
@@ -88,7 +92,7 @@ public class Transporter : IUpdatable
                 var amountToTransfer = _currentTask.Cargo.FirstOrDefault(x => x.Resource == item.Resource)?.Amount;
                 if (amountToTransfer is null) { continue; } // No need to transfer this item
                 if (item.Amount < amountToTransfer) { amountToTransfer = item.Amount; }
-                task.Destination.ReceiveImport(item.Resource, amountToTransfer.Value);
+                task.Destination.ReceiveImport(item.Resource, amountToTransfer.Value, tick, this);
                 Log += $"[Tick {tick}] Delivered {item.Amount} x {item.Resource.Id} to {task.Destination.Position}\n";
                 item.Amount -= amountToTransfer.Value;
             }
@@ -97,6 +101,8 @@ public class Transporter : IUpdatable
             _target = null;
         }
     }
+
+
 }
 
 public class ResourceAmount(Resource resource, int amount)
