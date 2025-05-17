@@ -9,7 +9,7 @@ internal class Program
 }
 
 //ToDo: Make it so the logs from the production facilities and transporters are stored in a sortable way so I can sort them by tick and see what happened at a certain time.
-//ToDo: Add volume to resources
+//ToDo: Make it so when transporters take or drop off product that they only take as much as they can hold.
 
 public interface IUpdatable
 {

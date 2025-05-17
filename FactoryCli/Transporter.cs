@@ -9,6 +9,8 @@ public class Transporter : IUpdatable
     public string Log { get; private set; } = ""; //probably replace this with List<string>
     public int PlayerId { get; set; } = 0;
     public int Id { get; set; } = 0;
+    public float MaxVolume { get; set; } = 10f;
+    //ToDo: maybe make it so they have a bulk volume and a container volume, that way they can carry a bunch of asteroids but fewer finished/containerized goods
 
     public List<ResourceAmount> Carrying { get; } = [];
 
