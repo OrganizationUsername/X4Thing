@@ -11,7 +11,6 @@ public class ProductionFacility : IUpdatable, IHasName
     public int PlayerId { get; set; } = 0;
     public int Id { get; set; } = 0;
     public string Name { get; set; } = "Production";
-    public List<string> DebugLog { get; } = []; //ToDo: Make another log that is `List<(int tick, string log)>` so I can sort it by tick and see what happened at a certain time. Maybe not `string log`, though. Maybe it's a structured type that's easier to query.
     public List<ILogLine> LogLines { get; } = [];
 
     public Vector2 Position { get; set; } = new(0, 0);
@@ -31,25 +30,20 @@ public class ProductionFacility : IUpdatable, IHasName
 
     public bool TryExport(Resource res, int amountToTake, int tick, Transporter receiver)
     {
-        DebugLog.Add($"[Tick {tick}] Exporting {amountToTake} of {res.Id} to {receiver.Name}");
-        //LogLines.Add(new TransportAssignedLog(tick, Id, res.Id, amountToTake, this, receiver));
         return _storage.Consume(res, amountToTake);
     }
 
     public void ReceiveImport(Resource res, int amountToTransfer, int tick, Transporter transporter)
     {
-        DebugLog.Add($"[Tick {tick}] Received {amountToTransfer} of {res.Id} from {transporter.Name}");
         LogLines.Add(new TransportReceivedLog(tick, Id, res.Id, amountToTransfer, Position, transporter));
         _storage.Add(res, amountToTransfer);
     }
 
-    [UsedImplicitly] public string GetDebugLog() => string.Join(Environment.NewLine, DebugLog);
 
     public void AddWorkshops(Recipe recipe, int count)
     {
         if (!_workshops.TryAdd(recipe, count)) { _workshops[recipe] += count; }
         if (!_activeJobs.ContainsKey(recipe)) { _activeJobs[recipe] = []; }
-        DebugLog.Add($"  Added {count} workshop(s) for {recipe.Output.Id}");
         LogLines.Add(new WorkshopAddedLog(0, Id, recipe.Output.Id, count, Position));
     }
 
@@ -91,12 +85,6 @@ public class ProductionFacility : IUpdatable, IHasName
                 }
                 else { break; }
             }
-        }
-
-        if (tempLog.Count > 0)
-        {
-            DebugLog.Add($"[Tick {currentTick}]");
-            DebugLog.AddRange(tempLog); //These should probably be records with an interface or something so I can sort them by tick and see what happened at a certain time and filter by event types.
         }
     }
     private bool CanConsumeInputs(Dictionary<Resource, int> inputs)

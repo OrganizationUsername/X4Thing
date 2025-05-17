@@ -6,7 +6,6 @@ public class Transporter : IUpdatable, IHasName
 {
     public Vector2 Position { get; set; }
     public float SpeedPerTick { get; set; } = 1f;
-    public string Log { get; private set; } = ""; //probably replace this with List<string>
     public int PlayerId { get; set; } = 0;
     public int Id { get; set; } = 0;
     public string Name { get; set; } = "Transporter";
@@ -27,7 +26,6 @@ public class Transporter : IUpdatable, IHasName
     {
         var task = new TransportTask(from, to, cargo);
         _taskQueue.Enqueue(task);
-        Log += $"{(currentTick is not null ? $"[Tick {currentTick}] " : "")}Enqueued transport: {string.Join(", ", cargo)} from {from.Name} ({from.Position}) to {to.Name}({to.Position})\n";
         LogLines.Add(new TransportAssignedLog(currentTick ?? 0, Id, cargo.First().Resource.Id, cargo.Sum(x => x.Amount), from, to));
     }
 
@@ -81,7 +79,6 @@ public class Transporter : IUpdatable, IHasName
                 }
                 else
                 {
-                    Log += $"[Tick {tick}] Failed to pick up {item.Amount} x {item.Resource.Id}\n";
                     LogLines.Add(new TransportAssignedLog(tick, Id, item.Resource.Id, item.Amount, task.Source, task.Destination));
                 }
             }
@@ -96,7 +93,6 @@ public class Transporter : IUpdatable, IHasName
                 if (amountToTransfer is null) { continue; } // No need to transfer this item
                 if (item.Amount < amountToTransfer) { amountToTransfer = item.Amount; }
                 task.Destination.ReceiveImport(item.Resource, amountToTransfer.Value, tick, this);
-                Log += $"[Tick {tick}] Delivered {item.Amount} x {item.Resource.Id} to {task.Destination.Position}\n";
                 LogLines.Add(new DeliveryLog(tick, Id, task.Destination.Position, [new(item.Resource, amountToTransfer.Value),]));
                 item.Amount -= amountToTransfer.Value;
             }
@@ -105,8 +101,6 @@ public class Transporter : IUpdatable, IHasName
             _target = null;
         }
     }
-
-
 }
 
 public class ResourceAmount(Resource resource, int amount)
