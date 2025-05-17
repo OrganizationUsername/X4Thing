@@ -6,12 +6,15 @@ public class Ticker
     public int CurrentTick { get; private set; }
 
     public void Register(IUpdatable tickable) => _tickables.Add(tickable);
+    public GameData? GameData { get; set; }
+
 
     public void Tick()
     {
         CurrentTick++;
         foreach (var tickable in _tickables)
         {
+            GameData?.Tick(CurrentTick);
             tickable.Tick(CurrentTick);
         }
     }

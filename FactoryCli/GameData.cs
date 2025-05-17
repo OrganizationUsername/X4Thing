@@ -2,7 +2,7 @@
 
 namespace FactoryCli;
 
-public class GameData
+public class GameData : IUpdatable
 {
     public Dictionary<string, Resource> Resources { get; } = new();
     public Dictionary<string, Recipe> Recipes { get; } = new();
@@ -24,6 +24,29 @@ public class GameData
         gameData.InitializeResources();
         gameData.InitializeRecipes();
         return gameData;
+    }
+
+    public void Tick(int currentTick)
+    {
+        AssignTransportersToBestTrades();
+    }
+
+    public void AssignTransportersToBestTrades()
+    {
+        foreach (var transporter in Transporters.Where(t => !t.HasActiveTask()))
+        {
+            var trade = FindBestTrade();
+            if (trade is null) continue;
+
+            var (from, to, resource, amount) = trade.Value;
+            var resourceVolume = resource.Volume;
+            var maxAmount = (int)(transporter.MaxVolume / resourceVolume);
+
+            if (maxAmount <= 0) continue;
+
+            var toSend = Math.Min(amount, maxAmount);
+            transporter.AssignTask(from, to, [new ResourceAmount(resource, toSend)]);
+        }
     }
 
     public (ProductionFacility from, ProductionFacility to, Resource resource, int amount)? FindBestTrade() //this can take in an int to note PlayerId. Can also take in a ShipId so we know where it is. We can calculate TotalValueAdded/(Distance/Speed)
@@ -141,4 +164,5 @@ public class GameData
 
     public Resource GetResource(string id) => Resources[id];
     public Recipe GetRecipe(string id) => Recipes[id];
+
 }

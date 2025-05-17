@@ -18,6 +18,8 @@ public class Transporter : IUpdatable
     private TransportTask? _currentTask;
     private Vector2? _target;
 
+    public bool HasActiveTask() => _currentTask != null || _taskQueue.Count > 0;
+
     public void AssignTask(ProductionFacility from, ProductionFacility to, List<ResourceAmount> cargo)
     {
         var task = new TransportTask(from, to, cargo);

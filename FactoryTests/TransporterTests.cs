@@ -234,10 +234,10 @@ public class TransporterTests
         // Source facility has 500 metal bars
         var sourceStorage = new ResourceStorage();
         sourceStorage.Add(metalBar, 500);
-        var source = new ProductionFacility(sourceStorage, []) { Position = new Vector2(0, 0) };
+        var source = new ProductionFacility(sourceStorage, []) { Position = new Vector2(0, 0), };
 
         var destStorage = new ResourceStorage();
-        var dest = new ProductionFacility(destStorage, []) { Position = new Vector2(5, 0) };
+        var dest = new ProductionFacility(destStorage, []) { Position = new Vector2(5, 0), };
 
         // Transporter has very small volume capacity
         var transporter = new Transporter
@@ -247,7 +247,7 @@ public class TransporterTests
             MaxVolume = 10f, // Can carry up to 6 metal bars (6 x 1.5 = 9.0)
         };
 
-        transporter.AssignTask(source, dest, [new ResourceAmount(metalBar, 500)]);
+        transporter.AssignTask(source, dest, [new ResourceAmount(metalBar, 500),]);
 
         var ticker = new Ticker();
         ticker.Register(transporter);
@@ -264,5 +264,56 @@ public class TransporterTests
         // Confirm that source has 494 left
         Assert.Equal(494, sourceStorage.GetAmount(metalBar));
     }
+
+    [Fact]
+    public void Transporter_IsAutomaticallyAssigned_WhenStationsHavePushAndPull()
+    {
+        var gameData = GameData.GetDefault();
+        var metalBar = gameData.GetResource("metal_bar");
+
+        var sourceStorage = new ResourceStorage();
+        sourceStorage.Add(metalBar, 100);
+        var source = new ProductionFacility(sourceStorage, []) { Position = new Vector2(0, 0), };
+
+        var destStorage = new ResourceStorage();
+        var recipe = gameData.GetRecipe("recipe_computer_part");
+        var dest = new ProductionFacility(destStorage, new Dictionary<Recipe, int> { { recipe, 1 }, }) { Position = new Vector2(5, 0), };
+        var transporter = new Transporter { Position = new Vector2(0, 0), SpeedPerTick = 5f, MaxVolume = 10f, };
+
+        gameData.Facilities.Add(source);
+        gameData.Facilities.Add(dest);
+        gameData.Transporters.Add(transporter);
+
+        // Manually simulate a need by faking negative inventory
+        destStorage.Add(metalBar, -10);
+
+        var ticker = new Ticker { GameData = gameData, };
+        ticker.Register(source);
+        ticker.Register(dest);
+        ticker.Register(transporter);
+
+        // --- Tick 1: Dispatch should happen
+        ticker.RunTicks(2); //this takes 2 instead of 1
+        Assert.Contains("Enqueued", transporter.Log);
+        Assert.Empty(transporter.Carrying); // Not yet picked up
+
+        // --- Tick 2: Pickup
+        ticker.RunTicks(1);
+        Assert.Contains("Picked up", transporter.Log);
+        Assert.True(transporter.Carrying.Sum(x => x.Amount) > 0);
+        Assert.True(sourceStorage.GetAmount(metalBar) < 100);
+
+        // --- Tick 3: Arrive at dest, deliver
+        ticker.RunTicks(1);
+        Assert.Contains("Delivered", transporter.Log);
+
+        // --- Final state check
+        Assert.Empty(transporter.Carrying);
+        Assert.True(destStorage.GetAmount(metalBar) > 0, $"Expected metalBars in dest, found: {destStorage.GetAmount(metalBar)}");
+
+        Assert.DoesNotContain("Failed", transporter.Log); // Sanity check: No failures
+    }
+
+
 
 }
