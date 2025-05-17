@@ -2,7 +2,7 @@
 
 internal class Program
 {
-    static void Main(string[] args)
+    static void Main()
     {
         Console.WriteLine("Hello, World!");
     }
@@ -13,11 +13,64 @@ public interface IUpdatable
     void Tick(int currentTick);
 }
 
-public enum ResourceType
+public enum ResourceType { Ore = 0, EnergyCell = 1, MetalBar = 2, Wheat = 3, Flour = 4, Bread = 5, Plastic = 6, ComputerPart = 7, }
+
+public static class RecipeDatabase
 {
-    Ore,
-    EnergyCell,
-    MetalBar,
+    private static readonly Dictionary<ResourceType, Recipe> Recipes = new();
+
+    static RecipeDatabase()
+    {
+        Recipes[ResourceType.MetalBar] = new Recipe(
+            output: ResourceType.MetalBar,
+            outputAmount: 1,
+            inputs: new Dictionary<ResourceType, int>
+            {
+                { ResourceType.Ore, 2 },
+                { ResourceType.EnergyCell, 1 },
+            },
+            duration: 10,
+            requiredWorkshops: 1
+        );
+
+        Recipes[ResourceType.Bread] = new Recipe(
+            output: ResourceType.Bread,
+            outputAmount: 1,
+            inputs: new Dictionary<ResourceType, int>
+            {
+                { ResourceType.Wheat, 2 },
+                { ResourceType.Flour, 1 },
+            },
+            duration: 8,
+            requiredWorkshops: 1
+        );
+        Recipes[ResourceType.ComputerPart] = new Recipe(
+            output: ResourceType.ComputerPart,
+            outputAmount: 1,
+            inputs: new Dictionary<ResourceType, int>
+            {
+                { ResourceType.MetalBar, 2 },
+                { ResourceType.Plastic, 1 }
+            },
+            duration: 10,
+            requiredWorkshops: 1
+        );
+    }
+
+    public static Recipe? GetRecipe(ResourceType outputType)
+    {
+        Recipes.TryGetValue(outputType, out var recipe);
+        return recipe;
+    }
+}
+
+public class Recipe(ResourceType output, int outputAmount, Dictionary<ResourceType, int> inputs, int duration, int requiredWorkshops)
+{
+    public ResourceType Output { get; } = output;
+    public int OutputAmount { get; } = outputAmount;
+    public Dictionary<ResourceType, int> Inputs { get; } = inputs;
+    public int Duration { get; } = duration;
+    public int RequiredWorkshops { get; } = requiredWorkshops;
 }
 
 public class ResourceStorage
@@ -41,31 +94,90 @@ public class ResourceStorage
     public int GetAmount(ResourceType type) => _resources.GetValueOrDefault(type, 0);
 }
 
-public class Factory(ResourceStorage storage) : IUpdatable //this syntax works. Always use this.
+public class ProductionFacility : IUpdatable
 {
-    private int _progress = 0;
+    private readonly ResourceStorage _storage;
+    private readonly Dictionary<ResourceType, Recipe> _recipes;
+    private readonly Dictionary<ResourceType, int> _workshops;
+    private readonly Dictionary<ResourceType, List<ProductionJob>> _activeJobs;
+
+    public ProductionFacility(ResourceStorage storage, Dictionary<ResourceType, int> recipeWorkshopAssignments)
+    {
+        _storage = storage;
+        _recipes = new();
+        _workshops = new();
+        _activeJobs = new();
+
+        foreach (var (product, count) in recipeWorkshopAssignments)
+        {
+            var recipe = RecipeDatabase.GetRecipe(product) ?? throw new Exception($"Recipe not found for {product}");
+            _recipes[product] = recipe;
+            _workshops[product] = count;
+            _activeJobs[product] = [];
+        }
+    }
 
     public void Tick(int currentTick)
     {
-        //This is way too hardcoded. Make it so I can pass in recipes or something.
-        if (_progress > 0)
+        foreach (var (product, recipe) in _recipes)
         {
-            _progress++;
-            if (_progress < 10) { return; }
+            var jobs = _activeJobs[product];
 
-            storage.Add(ResourceType.MetalBar, 1);
-            _progress = 0;
-            return;
+            // Step 1: Start new jobs before progressing existing ones
+            var availableWorkshops = _workshops[product] - jobs.Count;
+            for (var i = 0; i < availableWorkshops; i++)
+            {
+                if (CanConsumeInputs(recipe.Inputs))
+                {
+                    ConsumeInputs(recipe.Inputs);
+                    jobs.Add(new ProductionJob { Elapsed = 1 }); // Start job: first tick counts
+                }
+                else break;
+            }
+
+            // Step 2: Progress and complete jobs
+            for (var i = jobs.Count - 1; i >= 0; i--)
+            {
+                var job = jobs[i];
+
+                if (job.Elapsed >= recipe.Duration)
+                {
+                    _storage.Add(recipe.Output, recipe.OutputAmount);
+                    jobs.RemoveAt(i);
+                }
+                else
+                {
+                    job.Elapsed++;
+                }
+            }
         }
+    }
 
-        if (storage.Consume(ResourceType.Ore, 2) && storage.Consume(ResourceType.EnergyCell, 1)) { _progress = 1; }
+
+    private bool CanConsumeInputs(Dictionary<ResourceType, int> inputs)
+    {
+        foreach (var kvp in inputs)
+        {
+            if (_storage.GetAmount(kvp.Key) < kvp.Value) { return false; }
+        }
+        return true;
+    }
+
+    private void ConsumeInputs(Dictionary<ResourceType, int> inputs)
+    {
+        foreach (var kvp in inputs) { _storage.Consume(kvp.Key, kvp.Value); }
+    }
+
+    private class ProductionJob
+    {
+        public int Elapsed;
     }
 }
 
 public class Ticker
 {
     private readonly List<IUpdatable> _tickables = [];
-    public int CurrentTick { get; private set; } = 0;
+    public int CurrentTick { get; private set; }
 
     public void Register(IUpdatable tickable) => _tickables.Add(tickable);
 
