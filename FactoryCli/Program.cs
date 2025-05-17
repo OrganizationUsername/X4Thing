@@ -50,7 +50,7 @@ public static class RecipeDatabase
             inputs: new Dictionary<ResourceType, int>
             {
                 { ResourceType.MetalBar, 2 },
-                { ResourceType.Plastic, 1 }
+                { ResourceType.Plastic, 1 },
             },
             duration: 10,
             requiredWorkshops: 1
@@ -101,6 +101,8 @@ public class ProductionFacility : IUpdatable
     private readonly Dictionary<ResourceType, int> _workshops;
     private readonly Dictionary<ResourceType, List<ProductionJob>> _activeJobs;
 
+    public List<string> DebugLog { get; } = [];
+
     public ProductionFacility(ResourceStorage storage, Dictionary<ResourceType, int> recipeWorkshopAssignments)
     {
         _storage = storage;
@@ -117,55 +119,83 @@ public class ProductionFacility : IUpdatable
         }
     }
 
+    public void AddWorkshops(ResourceType product, int count)
+    {
+        if (!_recipes.ContainsKey(product))
+        {
+            var recipe = RecipeDatabase.GetRecipe(product)
+                ?? throw new Exception($"Cannot add workshops for {product}: recipe not found.");
+
+            _recipes[product] = recipe;
+            _activeJobs[product] = [];
+        }
+
+        if (_workshops.ContainsKey(product))
+            _workshops[product] += count;
+        else
+            _workshops[product] = count;
+
+        DebugLog.Add($"  Added {count} workshop(s) for {product}");
+    }
+
     public void Tick(int currentTick)
     {
+        DebugLog.Add($"[Tick {currentTick}]");
+
         foreach (var (product, recipe) in _recipes)
         {
             var jobs = _activeJobs[product];
 
-            // Step 1: Start new jobs before progressing existing ones
+            // Step 1: Progress jobs
+            for (var i = jobs.Count - 1; i >= 0; i--)
+            {
+                var job = jobs[i];
+                job.Elapsed++;
+
+                DebugLog.Add($"  Job for {product} ticked to {job.Elapsed}/{recipe.Duration}");
+
+                if (job.Elapsed >= recipe.Duration)
+                {
+                    _storage.Add(recipe.Output, recipe.OutputAmount);
+                    jobs.RemoveAt(i);
+                    DebugLog.Add($"  Completed job for {product}, output added to storage");
+                }
+            }
+
+            // Step 2: Start new jobs
             var availableWorkshops = _workshops[product] - jobs.Count;
             for (var i = 0; i < availableWorkshops; i++)
             {
                 if (CanConsumeInputs(recipe.Inputs))
                 {
                     ConsumeInputs(recipe.Inputs);
-                    jobs.Add(new ProductionJob { Elapsed = 1 }); // Start job: first tick counts
-                }
-                else break;
-            }
-
-            // Step 2: Progress and complete jobs
-            for (var i = jobs.Count - 1; i >= 0; i--)
-            {
-                var job = jobs[i];
-
-                if (job.Elapsed >= recipe.Duration)
-                {
-                    _storage.Add(recipe.Output, recipe.OutputAmount);
-                    jobs.RemoveAt(i);
+                    jobs.Add(new ProductionJob());
+                    DebugLog.Add($"  Started job for {product} (duration: {recipe.Duration})");
                 }
                 else
                 {
-                    job.Elapsed++;
+                    DebugLog.Add($"  Not enough inputs to start job for {product}");
+                    break;
                 }
             }
         }
     }
 
-
     private bool CanConsumeInputs(Dictionary<ResourceType, int> inputs)
     {
         foreach (var kvp in inputs)
         {
-            if (_storage.GetAmount(kvp.Key) < kvp.Value) { return false; }
+            if (_storage.GetAmount(kvp.Key) < kvp.Value) return false;
         }
         return true;
     }
 
     private void ConsumeInputs(Dictionary<ResourceType, int> inputs)
     {
-        foreach (var kvp in inputs) { _storage.Consume(kvp.Key, kvp.Value); }
+        foreach (var kvp in inputs)
+        {
+            _storage.Consume(kvp.Key, kvp.Value);
+        }
     }
 
     private class ProductionJob
@@ -173,6 +203,8 @@ public class ProductionFacility : IUpdatable
         public int Elapsed;
     }
 }
+
+
 
 public class Ticker
 {
