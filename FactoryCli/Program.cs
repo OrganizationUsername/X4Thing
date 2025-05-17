@@ -1,4 +1,5 @@
 ﻿using JetBrains.Annotations;
+using System.Numerics;
 
 namespace FactoryCli;
 
@@ -98,8 +99,9 @@ public class ProductionFacility : IUpdatable
     private readonly Dictionary<ResourceType, Recipe> _recipes;
     private readonly Dictionary<ResourceType, int> _workshops;
     private readonly Dictionary<ResourceType, List<ProductionJob>> _activeJobs;
-
     public List<string> DebugLog { get; } = [];
+
+    public Vector2 Position { get; set; } = new(0, 0);
 
     public ProductionFacility(ResourceStorage storage, Dictionary<ResourceType, int> recipeWorkshopAssignments)
     {
@@ -136,7 +138,7 @@ public class ProductionFacility : IUpdatable
 
     public void Tick(int currentTick)
     {
-        DebugLog.Add($"[Tick {currentTick}]");
+        var tempLog = new List<string>();
 
         foreach (var (product, recipe) in _recipes)
         {
@@ -148,13 +150,13 @@ public class ProductionFacility : IUpdatable
                 var job = jobs[i];
                 job.Elapsed++;
 
-                DebugLog.Add($"  Job for {product} ticked to {job.Elapsed}/{recipe.Duration}");
+                tempLog.Add($"  Job for {product} ticked to {job.Elapsed}/{recipe.Duration}");
 
                 if (job.Elapsed >= recipe.Duration)
                 {
                     _storage.Add(recipe.Output, recipe.OutputAmount);
                     jobs.RemoveAt(i);
-                    DebugLog.Add($"  Completed job for {product}, output added to storage");
+                    tempLog.Add($"  Completed job for {product}, output added to storage");
                 }
             }
 
@@ -166,15 +168,16 @@ public class ProductionFacility : IUpdatable
                 {
                     ConsumeInputs(recipe.Inputs);
                     jobs.Add(new ProductionJob());
-                    DebugLog.Add($"  Started job for {product} (duration: {recipe.Duration})");
+                    tempLog.Add($"  Started job for {product} (duration: {recipe.Duration})");
                 }
-                else
-                {
-                    DebugLog.Add($"  Not enough inputs to start job for {product}");
-                    break;
-                }
+                else { break; }
             }
         }
+
+        if (tempLog.Count <= 0) { return; }
+
+        DebugLog.Add($"[Tick {currentTick}]");
+        DebugLog.AddRange(tempLog);
     }
 
     private bool CanConsumeInputs(Dictionary<ResourceType, int> inputs)
@@ -227,26 +230,4 @@ public class ProductionFacility : IUpdatable
         return soonestCompletion;
     }
 
-}
-
-public class Ticker
-{
-    private readonly List<IUpdatable> _tickables = [];
-    public int CurrentTick { get; private set; }
-
-    public void Register(IUpdatable tickable) => _tickables.Add(tickable);
-
-    public void Tick()
-    {
-        CurrentTick++;
-        foreach (var tickable in _tickables)
-        {
-            tickable.Tick(CurrentTick);
-        }
-    }
-
-    public void RunTicks(int count)
-    {
-        for (var i = 0; i < count; i++) { Tick(); }
-    }
 }
