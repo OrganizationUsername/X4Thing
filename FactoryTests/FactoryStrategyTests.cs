@@ -91,7 +91,7 @@ public class FactoryStrategyTests
         // === Optional: Log check for debugging
         //var formatted = gameData.GetAllLogsFormatted();
         /*
-[Tick 0000] Transporter 1 assigned to deliver 10 x ore from Source(<0, 0>) to Target(<10, 0>)
+           [Tick 0000] Transporter 1 assigned to deliver 10 x ore from Source(<0, 0>) to Target(<10, 0>)
            [Tick 0000] Transporter 1 assigned to deliver 10 x energy_cell from Source(<0, 0>) to Target(<10, 0>)
            [Tick 0001] Transporter 1 picked up: 5 x ore from Source
            [Tick 0001] Transporter 1 assigned to deliver 10 x ore from Source(<0, 0>) to Target(<10, 0>)
@@ -177,6 +177,7 @@ public class FactoryStrategyTests
         Assert.Contains(requests, r => r.resource == energy && r.amount == 1);
         Assert.Equal(2, requests.Count);
     }
+
     [Fact]
     public void SustainedProductionStrategy_RequestsSustainedInputs_OverTime()
     {
@@ -202,6 +203,4 @@ public class FactoryStrategyTests
         Assert.Contains(requests, r => r.resource == energy && r.amount == 40);
         Assert.Equal(2, requests.Count);
     }
-
-
 }

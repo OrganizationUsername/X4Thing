@@ -187,7 +187,6 @@ public class TransporterTests
         Assert.Empty(transporter.Carrying);
     }
 
-
     [Fact]
     public void Transporter_ProcessesMultipleQueuedTasksInOrder_WithIntermediateChecks()
     {
@@ -634,7 +633,6 @@ public class TransporterTests
         // --- Verify final output
         var logs = gameData.GetAllLogs().ToList();
         //var formatted = gameData.GetAllLogsFormatted();
-
         /*
            [Tick 0001] Started job for metal_bar (duration: 10) at <0, 0>
            [Tick 0001] Started job for metal_bar (duration: 10) at <0, 0>
@@ -955,5 +953,4 @@ public class TransporterTests
         Assert.Equal(01, destStorage.GetIncomingAmount(ore));
         Assert.Equal(34, destStorage.GetTotalIncludingIncoming(ore));
     }
-
 }

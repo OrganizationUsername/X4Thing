@@ -200,10 +200,7 @@ public class FactoryTests
         var recipe = gameData.Recipes.Values.First(r => r.Output == metalBar);
 
         var storage = new ResourceStorage();
-        var facility = new ProductionFacility(storage, new Dictionary<Recipe, int>
-        {
-            { recipe, 1 },
-        });
+        var facility = new ProductionFacility(storage, new Dictionary<Recipe, int> { { recipe, 1 }, });
 
         var ticker = new Ticker();
         ticker.Register(facility);
@@ -257,11 +254,7 @@ public class FactoryTests
         storage.Add(ore, 2);
         storage.Add(energy, 1);
 
-        var facility = new ProductionFacility(storage, new Dictionary<Recipe, int>
-        {
-            { metalBarRecipe, 1 },
-            { computerPartRecipe, 1 },
-        });
+        var facility = new ProductionFacility(storage, new Dictionary<Recipe, int> { { metalBarRecipe, 1 }, { computerPartRecipe, 1 }, });
 
         var ticker = new Ticker();
         ticker.Register(facility);
@@ -402,10 +395,7 @@ public class FactoryTests
         var storageB = new ResourceStorage();
         storageB.Add(plastic, 1);
         storageB.Add(metalBar, 1); // Preloaded to simulate partial progress
-        var stationB = new ProductionFacility(storageB, new Dictionary<Recipe, int>
-        {
-            { computerPartRecipe, 1 },
-        });
+        var stationB = new ProductionFacility(storageB, new Dictionary<Recipe, int> { { computerPartRecipe, 1 }, });
 
         var ticker = new Ticker();
         ticker.Register(stationA);

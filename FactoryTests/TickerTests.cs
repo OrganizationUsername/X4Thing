@@ -4,17 +4,16 @@ namespace FactoryTests;
 
 public class TickerTests
 {
-
     [Fact]
     public void GetTicksUntilNextEvent_ReturnsNull_WhenFacilityIsIdle()
     {
-        var gameData = GameData.GetDefault();
         var storage = new ResourceStorage();
 
         var facility = new ProductionFacility(storage, new Dictionary<Recipe, int>()); // No workshops
 
         Assert.Null(facility.GetTicksUntilNextEvent());
     }
+
     [Fact]
     public void GetTicksUntilNextEvent_ReturnsZero_WhenJobCanStartNow()
     {
@@ -35,6 +34,7 @@ public class TickerTests
 
         Assert.Equal(0, facility.GetTicksUntilNextEvent());
     }
+
     [Fact]
     public void GetTicksUntilNextEvent_ReturnsTicksUntilNextCompletion()
     {
@@ -113,6 +113,4 @@ public class TickerTests
 
         Assert.Equal(0, facility.GetTicksUntilNextEvent()); // Now it can start
     }
-
-
 }
