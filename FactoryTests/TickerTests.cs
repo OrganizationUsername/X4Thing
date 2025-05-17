@@ -8,7 +8,7 @@ public class TickerTests
     [Fact]
     public void GetTicksUntilNextEvent_ReturnsNull_WhenFacilityIsIdle()
     {
-        var gameData = new GameData();
+        var gameData = GameData.GetDefault();
         var storage = new ResourceStorage();
 
         var facility = new ProductionFacility(storage, new Dictionary<Recipe, int>()); // No workshops
@@ -18,7 +18,7 @@ public class TickerTests
     [Fact]
     public void GetTicksUntilNextEvent_ReturnsZero_WhenJobCanStartNow()
     {
-        var gameData = new GameData();
+        var gameData = GameData.GetDefault();
         var ore = gameData.GetResource("ore");
         var energy = gameData.GetResource("energy_cell");
         var metalBar = gameData.GetResource("metal_bar");
@@ -38,7 +38,7 @@ public class TickerTests
     [Fact]
     public void GetTicksUntilNextEvent_ReturnsTicksUntilNextCompletion()
     {
-        var gameData = new GameData();
+        var gameData = GameData.GetDefault();
         var ore = gameData.GetResource("ore");
         var energy = gameData.GetResource("energy_cell");
         var metalBar = gameData.GetResource("metal_bar");
@@ -68,7 +68,7 @@ public class TickerTests
     [Fact]
     public void GetTicksUntilNextEvent_ReturnsSoonestCompletionOfMultipleJobs()
     {
-        var gameData = new GameData();
+        var gameData = GameData.GetDefault();
         var ore = gameData.GetResource("ore");
         var energy = gameData.GetResource("energy_cell");
         var metalBar = gameData.GetResource("metal_bar");
@@ -94,7 +94,7 @@ public class TickerTests
     [Fact]
     public void GetTicksUntilNextEvent_ReturnsZero_WhenJobBecomesPossible()
     {
-        var gameData = new GameData();
+        var gameData = GameData.GetDefault();
         var ore = gameData.GetResource("ore");
         var energy = gameData.GetResource("energy_cell");
         var metalBar = gameData.GetResource("metal_bar");

@@ -7,7 +7,7 @@ public class FactoryTests
     [Fact]
     public void ProductionFacility_DoesNotStartJobs_WhenResourcesAreInsufficient()
     {
-        var gameData = new GameData();
+        var gameData = GameData.GetDefault();
         var metalBar = gameData.GetResource("metal_bar");
         var recipe = gameData.Recipes.Values.First(r => r.Output == metalBar);
 
@@ -28,7 +28,7 @@ public class FactoryTests
     [Fact]
     public void ProductionFacility_UsesOnlyEnoughWorkshops_AsResourcesAllow()
     {
-        var gameData = new GameData();
+        var gameData = GameData.GetDefault();
         var metalBar = gameData.GetResource("metal_bar");
         var ore = gameData.GetResource("ore");
         var energy = gameData.GetResource("energy_cell");
@@ -51,7 +51,7 @@ public class FactoryTests
     [Fact]
     public void ProductionFacility_DoesNotStarve_OneRecipe_WhenSharingInputs()
     {
-        var gameData = new GameData();
+        var gameData = GameData.GetDefault();
         var metalBar = gameData.GetResource("metal_bar");
         var bread = gameData.GetResource("bread");
 
@@ -87,7 +87,7 @@ public class FactoryTests
     [Fact]
     public void ProductionFacility_Produces_One_MetalBar_With_Sufficient_Resources_And_One_Workshop()
     {
-        var gameData = new GameData();
+        var gameData = GameData.GetDefault();
         var metalBar = gameData.GetResource("metal_bar");
         var ore = gameData.GetResource("ore");
         var energy = gameData.GetResource("energy_cell");
@@ -121,7 +121,7 @@ public class FactoryTests
     [Fact]
     public void ProductionFacility_Uses_Multiple_Workshops_To_Produce_Parallel()
     {
-        var gameData = new GameData();
+        var gameData = GameData.GetDefault();
         var metalBar = gameData.GetResource("metal_bar");
         var ore = gameData.GetResource("ore");
         var energy = gameData.GetResource("energy_cell");
@@ -149,7 +149,7 @@ public class FactoryTests
     [Fact]
     public void Facility_Produces_Bread_And_MetalBar_Simultaneously()
     {
-        var gameData = new GameData();
+        var gameData = GameData.GetDefault();
 
         var wheat = gameData.GetResource("wheat");
         var flour = gameData.GetResource("flour");
@@ -200,7 +200,7 @@ public class FactoryTests
     [Fact]
     public void ProductionFacility_Starts_Production_When_Resources_Arrive_MidTick()
     {
-        var gameData = new GameData();
+        var gameData = GameData.GetDefault();
         var metalBar = gameData.GetResource("metal_bar");
         var ore = gameData.GetResource("ore");
         var energy = gameData.GetResource("energy_cell");
@@ -247,7 +247,7 @@ public class FactoryTests
     [Fact]
     public void ProductionFacility_Produces_ComputerPart_From_Upstream_MetalBars()
     {
-        var gameData = new GameData();
+        var gameData = GameData.GetDefault();
 
         var ore = gameData.GetResource("ore");
         var energy = gameData.GetResource("energy_cell");
@@ -295,7 +295,7 @@ public class FactoryTests
     [Fact]
     public void ProductionFacility_BeginsProduction_AfterWorkshopIsAdded()
     {
-        var gameData = new GameData();
+        var gameData = GameData.GetDefault();
         var metalBar = gameData.GetResource("metal_bar");
         var ore = gameData.GetResource("ore");
         var energy = gameData.GetResource("energy_cell");
@@ -330,7 +330,7 @@ public class FactoryTests
     [Fact]
     public void ProductionFacility_CreatesComputerPart_WhenWorkshopAdded_Later()
     {
-        var gameData = new GameData();
+        var gameData = GameData.GetDefault();
 
         var metalBar = gameData.GetResource("metal_bar");
         var ore = gameData.GetResource("ore");
@@ -385,7 +385,7 @@ public class FactoryTests
     [Fact]
     public void ProductionFacilities_Cooperate_ViaManualTransport()
     {
-        var gameData = new GameData();
+        var gameData = GameData.GetDefault();
 
         var ore = gameData.GetResource("ore");
         var energy = gameData.GetResource("energy_cell");
