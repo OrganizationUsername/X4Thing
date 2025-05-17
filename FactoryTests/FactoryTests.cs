@@ -7,31 +7,44 @@ public class FactoryTests
     [Fact]
     public void ProductionFacility_DoesNotStartJobs_WhenResourcesAreInsufficient()
     {
+        // Arrange
+        var gameData = new GameData();
+        var metalBar = gameData.GetResource("metal_bar");
+        var recipe = gameData.Recipes.Values.First(r => r.Output == metalBar);
+
         var storage = new ResourceStorage(); // No inputs
 
-        var facility = new ProductionFacility(storage, new Dictionary<ResourceType, int>
+        var facility = new ProductionFacility(storage, new Dictionary<RecipeDef, int>
         {
-            { ResourceType.MetalBar, 1 },
+            { recipe, 1 }, // One workshop for MetalBar production
         });
 
         var ticker = new Ticker();
         ticker.Register(facility);
 
-        ticker.RunTicks(20);
+        // Act
+        ticker.RunTicks(20); // Run enough ticks to see if any job starts
 
-        Assert.Equal(0, storage.GetAmount(ResourceType.MetalBar));
+        // Assert
+        Assert.Equal(0, storage.GetAmount(metalBar)); // No MetalBar should be produced
     }
 
     [Fact]
     public void ProductionFacility_UsesOnlyEnoughWorkshops_AsResourcesAllow()
     {
-        var storage = new ResourceStorage();
-        storage.Add(ResourceType.Ore, 4);         // Enough for 2 jobs
-        storage.Add(ResourceType.EnergyCell, 1);  // Only enough for 1 job
+        var gameData = new GameData();
+        var metalBar = gameData.GetResource("metal_bar");
+        var ore = gameData.GetResource("ore");
+        var energy = gameData.GetResource("energy_cell");
+        var recipe = gameData.Recipes.Values.First(r => r.Output == metalBar);
 
-        var facility = new ProductionFacility(storage, new Dictionary<ResourceType, int>
+        var storage = new ResourceStorage();
+        storage.Add(ore, 4);        // Enough for 2 jobs
+        storage.Add(energy, 1);     // Only enough for 1 job
+
+        var facility = new ProductionFacility(storage, new Dictionary<RecipeDef, int>
         {
-            { ResourceType.MetalBar, 5 }, // 5 workshops, but not enough resources
+            { recipe, 5 }, // 5 workshops, but resources restrict to 1 job
         });
 
         var ticker = new Ticker();
@@ -39,22 +52,34 @@ public class FactoryTests
 
         ticker.RunTicks(11);
 
-        Assert.Equal(1, storage.GetAmount(ResourceType.MetalBar)); // Only 1 job ran
+        Assert.Equal(1, storage.GetAmount(metalBar)); // Only 1 MetalBar should be produced
     }
 
     [Fact]
     public void ProductionFacility_DoesNotStarve_OneRecipe_WhenSharingInputs()
     {
-        var storage = new ResourceStorage();
-        storage.Add(ResourceType.Ore, 2);
-        storage.Add(ResourceType.EnergyCell, 1);
-        storage.Add(ResourceType.Flour, 1);
-        storage.Add(ResourceType.Wheat, 2);
+        var gameData = new GameData();
+        var metalBar = gameData.GetResource("metal_bar");
+        var bread = gameData.GetResource("bread");
 
-        var facility = new ProductionFacility(storage, new Dictionary<ResourceType, int>
+        var ore = gameData.GetResource("ore");
+        var energy = gameData.GetResource("energy_cell");
+        var flour = gameData.GetResource("flour");
+        var wheat = gameData.GetResource("wheat");
+
+        var metalBarRecipe = gameData.Recipes.Values.First(r => r.Output == metalBar);
+        var breadRecipe = gameData.Recipes.Values.First(r => r.Output == bread);
+
+        var storage = new ResourceStorage();
+        storage.Add(ore, 2);
+        storage.Add(energy, 1);
+        storage.Add(flour, 1);
+        storage.Add(wheat, 2);
+
+        var facility = new ProductionFacility(storage, new Dictionary<RecipeDef, int>
         {
-            { ResourceType.MetalBar, 1 },
-            { ResourceType.Bread, 1 },
+            { metalBarRecipe, 1 },
+            { breadRecipe, 1 },
         });
 
         var ticker = new Ticker();
@@ -62,105 +87,136 @@ public class FactoryTests
 
         ticker.RunTicks(11); // Bread done at 9, MetalBar at 11
 
-        Assert.Equal(1, storage.GetAmount(ResourceType.Bread));
-        Assert.Equal(1, storage.GetAmount(ResourceType.MetalBar));
+        Assert.Equal(1, storage.GetAmount(bread));
+        Assert.Equal(1, storage.GetAmount(metalBar));
     }
-
 
     [Fact]
     public void ProductionFacility_Produces_One_MetalBar_With_Sufficient_Resources_And_One_Workshop()
     {
-        var storage = new ResourceStorage();
-        storage.Add(ResourceType.Ore, 2);
-        storage.Add(ResourceType.EnergyCell, 1);
+        var gameData = new GameData();
+        var metalBar = gameData.GetResource("metal_bar");
+        var ore = gameData.GetResource("ore");
+        var energy = gameData.GetResource("energy_cell");
+        var recipe = gameData.Recipes.Values.First(r => r.Output == metalBar);
 
-        var facility = new ProductionFacility(storage, new Dictionary<ResourceType, int>
+        var storage = new ResourceStorage();
+        storage.Add(ore, 2);
+        storage.Add(energy, 1);
+
+        var facility = new ProductionFacility(storage, new Dictionary<RecipeDef, int>
         {
-            { ResourceType.MetalBar, 1 },
+            { recipe, 1 },
         });
 
         var ticker = new Ticker();
         ticker.Register(facility);
 
-        ticker.RunTicks(10); // Run 10 ticks — MetalBar job still in progress (Elapsed = 9)
-        Assert.Equal(0, storage.GetAmount(ResourceType.MetalBar));
-
-        ticker.RunTicks(1); // Tick 11 — job completes, output added
-        Assert.Equal(1, storage.GetAmount(ResourceType.MetalBar));
-
-        // Run more ticks — no new resources, no new jobs
+        // Run 10 ticks — job still in progress
         ticker.RunTicks(10);
-        Assert.Equal(1, storage.GetAmount(ResourceType.MetalBar));
+        Assert.Equal(0, storage.GetAmount(metalBar));
+
+        // Tick 11 — job completes
+        ticker.RunTicks(1);
+        Assert.Equal(1, storage.GetAmount(metalBar));
+
+        // Further ticks don't trigger new jobs (no more inputs)
+        ticker.RunTicks(10);
+        Assert.Equal(1, storage.GetAmount(metalBar));
     }
 
     [Fact]
     public void ProductionFacility_Uses_Multiple_Workshops_To_Produce_Parallel()
     {
-        var storage = new ResourceStorage();
-        storage.Add(ResourceType.Ore, 10);
-        storage.Add(ResourceType.EnergyCell, 5);
+        var gameData = new GameData();
+        var metalBar = gameData.GetResource("metal_bar");
+        var ore = gameData.GetResource("ore");
+        var energy = gameData.GetResource("energy_cell");
+        var recipe = gameData.Recipes.Values.First(r => r.Output == metalBar);
 
-        var facility = new ProductionFacility(storage, new Dictionary<ResourceType, int>
+        var storage = new ResourceStorage();
+        storage.Add(ore, 10);         // Enough for 5 jobs
+        storage.Add(energy, 5);       // Enough for 5 jobs
+
+        var facility = new ProductionFacility(storage, new Dictionary<RecipeDef, int>
         {
-            { ResourceType.MetalBar, 2 }, // Two workshops = two jobs in parallel
+            { recipe, 2 }, // Two workshops = two jobs in parallel
         });
 
         var ticker = new Ticker();
         ticker.Register(facility);
 
-        ticker.RunTicks(10); // Tick 1–10: Jobs in progress
-        Assert.Equal(0, storage.GetAmount(ResourceType.MetalBar)); // Still running
+        ticker.RunTicks(10); // Tick 1–10: jobs in progress
+        Assert.Equal(0, storage.GetAmount(metalBar));
 
-        ticker.RunTicks(1); // Tick 11: Both jobs complete
-        Assert.Equal(2, storage.GetAmount(ResourceType.MetalBar));
+        ticker.RunTicks(1); // Tick 11: both jobs complete
+        Assert.Equal(2, storage.GetAmount(metalBar));
     }
 
     [Fact]
     public void Facility_Produces_Bread_And_MetalBar_Simultaneously()
     {
-        var storage = new ResourceStorage();
-        storage.Add(ResourceType.Wheat, 2);
-        storage.Add(ResourceType.Flour, 1);
-        storage.Add(ResourceType.Ore, 4);
-        storage.Add(ResourceType.EnergyCell, 2);
+        var gameData = new GameData();
 
-        var facility = new ProductionFacility(storage, new Dictionary<ResourceType, int>
+        var wheat = gameData.GetResource("wheat");
+        var flour = gameData.GetResource("flour");
+        var bread = gameData.GetResource("bread");
+
+        var ore = gameData.GetResource("ore");
+        var energy = gameData.GetResource("energy_cell");
+        var metalBar = gameData.GetResource("metal_bar");
+
+        var breadRecipe = gameData.Recipes.Values.First(r => r.Output == bread);
+        var metalBarRecipe = gameData.Recipes.Values.First(r => r.Output == metalBar);
+
+        var storage = new ResourceStorage();
+        storage.Add(wheat, 2);
+        storage.Add(flour, 1);
+        storage.Add(ore, 4);
+        storage.Add(energy, 2);
+
+        var facility = new ProductionFacility(storage, new Dictionary<RecipeDef, int>
         {
-            { ResourceType.MetalBar, 2 },
-            { ResourceType.Bread, 1 },
+            { metalBarRecipe, 2 },
+            { breadRecipe, 1 },
         });
 
         var ticker = new Ticker();
         ticker.Register(facility);
 
-        // Tick 1–8: Jobs progressing, nothing completed yet
+        // Tick 1–8: Bread and MetalBars still in progress
         ticker.RunTicks(8);
-        Assert.Equal(0, storage.GetAmount(ResourceType.Bread));
-        Assert.Equal(0, storage.GetAmount(ResourceType.MetalBar));
+        Assert.Equal(0, storage.GetAmount(bread));
+        Assert.Equal(0, storage.GetAmount(metalBar));
 
         // Tick 9: Bread completes
         ticker.RunTicks(1);
-        Assert.Equal(1, storage.GetAmount(ResourceType.Bread));
-        Assert.Equal(0, storage.GetAmount(ResourceType.MetalBar));
+        Assert.Equal(1, storage.GetAmount(bread));
+        Assert.Equal(0, storage.GetAmount(metalBar));
 
         // Tick 10: MetalBars still not done
         ticker.RunTicks(1);
-        Assert.Equal(1, storage.GetAmount(ResourceType.Bread));
-        Assert.Equal(0, storage.GetAmount(ResourceType.MetalBar));
+        Assert.Equal(1, storage.GetAmount(bread));
+        Assert.Equal(0, storage.GetAmount(metalBar));
 
         // Tick 11: MetalBars complete
         ticker.RunTicks(1);
-        Assert.Equal(2, storage.GetAmount(ResourceType.MetalBar));
+        Assert.Equal(2, storage.GetAmount(metalBar));
     }
 
     [Fact]
     public void ProductionFacility_Starts_Production_When_Resources_Arrive_MidTick()
     {
-        var storage = new ResourceStorage();
+        var gameData = new GameData();
+        var metalBar = gameData.GetResource("metal_bar");
+        var ore = gameData.GetResource("ore");
+        var energy = gameData.GetResource("energy_cell");
+        var recipe = gameData.Recipes.Values.First(r => r.Output == metalBar);
 
-        var facility = new ProductionFacility(storage, new Dictionary<ResourceType, int>
+        var storage = new ResourceStorage();
+        var facility = new ProductionFacility(storage, new Dictionary<RecipeDef, int>
         {
-            { ResourceType.MetalBar, 1 },
+            { recipe, 1 },
         });
 
         var ticker = new Ticker();
@@ -168,51 +224,57 @@ public class FactoryTests
 
         // Tick 1–5: no resources
         ticker.RunTicks(5);
-        Assert.Equal(0, storage.GetAmount(ResourceType.MetalBar));
+        Assert.Equal(0, storage.GetAmount(metalBar));
 
         // Add inputs after tick 5
-        storage.Add(ResourceType.Ore, 2);
-        storage.Add(ResourceType.EnergyCell, 1);
+        storage.Add(ore, 2);
+        storage.Add(energy, 1);
 
-        // Tick 6–15: 10 ticks (elapsed = 9)
+        // Tick 6–15: in progress
         ticker.RunTicks(10);
-        Assert.Equal(0, storage.GetAmount(ResourceType.MetalBar)); // still in progress
+        Assert.Equal(0, storage.GetAmount(metalBar)); // still running
 
-        // Tick 16: job completes
+        // Tick 16: complete
         ticker.RunTicks(1);
-        Assert.Equal(1, storage.GetAmount(ResourceType.MetalBar));
+        Assert.Equal(1, storage.GetAmount(metalBar));
 
-        // Add input for second MetalBar
-        storage.Add(ResourceType.Ore, 2);
-        storage.Add(ResourceType.EnergyCell, 1);
+        // Second job
+        storage.Add(ore, 2);
+        storage.Add(energy, 1);
 
-        // Tick 17–26: second job in progress
+        // Tick 17–26: working
         ticker.RunTicks(10);
-        Assert.Equal(1, storage.GetAmount(ResourceType.MetalBar)); // not done yet
+        Assert.Equal(1, storage.GetAmount(metalBar)); // still 1
 
-        // Tick 27: second job completes
+        // Tick 27: done
         ticker.RunTicks(1);
-        Assert.Equal(2, storage.GetAmount(ResourceType.MetalBar));
+        Assert.Equal(2, storage.GetAmount(metalBar));
     }
 
     [Fact]
     public void ProductionFacility_Produces_ComputerPart_From_Upstream_MetalBars()
     {
+        var gameData = new GameData();
+
+        var ore = gameData.GetResource("ore");
+        var energy = gameData.GetResource("energy_cell");
+        var metalBar = gameData.GetResource("metal_bar");
+        var plastic = gameData.GetResource("plastic");
+        var computerPart = gameData.GetResource("computer_part");
+
+        var metalBarRecipe = gameData.Recipes.Values.First(r => r.Output == metalBar);
+        var computerPartRecipe = gameData.Recipes.Values.First(r => r.Output == computerPart);
+
         var storage = new ResourceStorage();
+        storage.Add(metalBar, 1);       // pre-made
+        storage.Add(plastic, 1);
+        storage.Add(ore, 2);
+        storage.Add(energy, 1);
 
-        // Arrange: we start with:
-        // - 1 pre-existing MetalBar
-        // - resources to produce 1 more MetalBar (Ore + EnergyCell)
-        // - 1 Plastic (ComputerPart requires 2 MetalBars + 1 Plastic)
-        storage.Add(ResourceType.MetalBar, 1);
-        storage.Add(ResourceType.Plastic, 1);
-        storage.Add(ResourceType.Ore, 2);
-        storage.Add(ResourceType.EnergyCell, 1);
-
-        var facility = new ProductionFacility(storage, new Dictionary<ResourceType, int>
+        var facility = new ProductionFacility(storage, new Dictionary<RecipeDef, int>
         {
-            { ResourceType.MetalBar, 1 },
-            { ResourceType.ComputerPart, 1 },
+            { metalBarRecipe, 1 },
+            { computerPartRecipe, 1 },
         });
 
         var ticker = new Ticker();
@@ -220,151 +282,173 @@ public class FactoryTests
 
         // Tick 1–10: MetalBar is still in progress
         ticker.RunTicks(10);
-        Assert.Equal(1, storage.GetAmount(ResourceType.MetalBar)); // Only the original bar is still available
-        Assert.Equal(0, storage.GetAmount(ResourceType.ComputerPart)); // Not started
+        Assert.Equal(1, storage.GetAmount(metalBar));
+        Assert.Equal(0, storage.GetAmount(computerPart));
 
-        // Tick 11: MetalBar #2 finishes, ComputerPart starts
+        // Tick 11: MetalBar completes, ComputerPart starts
         ticker.RunTicks(1);
-        Assert.Equal(0, storage.GetAmount(ResourceType.MetalBar)); // Both bars consumed
-        Assert.Equal(0, storage.GetAmount(ResourceType.ComputerPart)); // Still in progress
+        Assert.Equal(0, storage.GetAmount(metalBar));
+        Assert.Equal(0, storage.GetAmount(computerPart));
 
-        // Tick 12–21: ComputerPart in progress
+        // Tick 12–21: in progress
         ticker.RunTicks(9);
-        Assert.Equal(0, storage.GetAmount(ResourceType.ComputerPart)); // Still not done
+        Assert.Equal(0, storage.GetAmount(computerPart));
 
-        // Tick 22: ComputerPart completes
+        // Tick 22: complete
         ticker.RunTicks(1);
-        Assert.Equal(1, storage.GetAmount(ResourceType.ComputerPart)); // ✅ Done
+        Assert.Equal(1, storage.GetAmount(computerPart));
     }
 
     [Fact]
     public void ProductionFacility_BeginsProduction_AfterWorkshopIsAdded()
     {
+        var gameData = new GameData();
+        var metalBar = gameData.GetResource("metal_bar");
+        var ore = gameData.GetResource("ore");
+        var energy = gameData.GetResource("energy_cell");
+        var recipe = gameData.Recipes.Values.First(r => r.Output == metalBar);
+
         var storage = new ResourceStorage();
+        storage.Add(ore, 2);
+        storage.Add(energy, 1);
 
-        // Add inputs upfront (enough for 1 MetalBar)
-        storage.Add(ResourceType.Ore, 2);
-        storage.Add(ResourceType.EnergyCell, 1);
-
-        // No workshops at initialization
-        var facility = new ProductionFacility(storage, new Dictionary<ResourceType, int>());
+        // No workshops yet
+        var facility = new ProductionFacility(storage, new Dictionary<RecipeDef, int>());
 
         var ticker = new Ticker();
         ticker.Register(facility);
 
-        // Tick 1–5: no workshops, no jobs started
+        // Tick 1–5: idle
         ticker.RunTicks(5);
-        Assert.Equal(0, storage.GetAmount(ResourceType.MetalBar));
+        Assert.Equal(0, storage.GetAmount(metalBar));
 
-        // Tick 6: add 1 workshop for MetalBar
-        facility.AddWorkshops(ResourceType.MetalBar, 1);
+        // Add workshop
+        facility.AddWorkshops(recipe, 1);
 
-        // Tick 6–15: production in progress (10 ticks)
+        // Tick 6–15: running
         ticker.RunTicks(10);
-        Assert.Equal(0, storage.GetAmount(ResourceType.MetalBar)); // Still producing
+        Assert.Equal(0, storage.GetAmount(metalBar));
 
-        // Tick 16: job completes
+        // Tick 16: done
         ticker.RunTicks(1);
-        Assert.Equal(1, storage.GetAmount(ResourceType.MetalBar));
+        Assert.Equal(1, storage.GetAmount(metalBar));
     }
 
     [Fact]
     public void ProductionFacility_CreatesComputerPart_WhenWorkshopAdded_Later()
     {
+        var gameData = new GameData();
+
+        var metalBar = gameData.GetResource("metal_bar");
+        var ore = gameData.GetResource("ore");
+        var energy = gameData.GetResource("energy_cell");
+        var plastic = gameData.GetResource("plastic");
+        var computerPart = gameData.GetResource("computer_part");
+
+        var metalBarRecipe = gameData.Recipes.Values.First(r => r.Output == metalBar);
+        var computerPartRecipe = gameData.Recipes.Values.First(r => r.Output == computerPart);
+
         var storage = new ResourceStorage();
+        storage.Add(metalBar, 1);       // pre-existing
+        storage.Add(plastic, 1);
+        storage.Add(ore, 2);
+        storage.Add(energy, 1);
 
-        // Initial state:
-        storage.Add(ResourceType.MetalBar, 1); // pre-existing
-        storage.Add(ResourceType.Plastic, 1);
-        storage.Add(ResourceType.Ore, 2);
-        storage.Add(ResourceType.EnergyCell, 1);
+        var facility = new ProductionFacility(storage, new Dictionary<RecipeDef, int>());
 
-        var facility = new ProductionFacility(storage, new Dictionary<ResourceType, int>());
         var ticker = new Ticker();
         ticker.Register(facility);
 
-        // Tick 1–5: No workshops yet
+        // Tick 1–5: No workshops
         ticker.RunTicks(5);
-        Assert.Equal(1, storage.GetAmount(ResourceType.MetalBar));
-        Assert.Equal(0, storage.GetAmount(ResourceType.ComputerPart));
+        Assert.Equal(1, storage.GetAmount(metalBar));
+        Assert.Equal(0, storage.GetAmount(computerPart));
 
-        // Tick 6: Add MetalBar workshop
-        facility.AddWorkshops(ResourceType.MetalBar, 1);
+        // Tick 6: Add workshop for MetalBar
+        facility.AddWorkshops(metalBarRecipe, 1);
 
-        // Tick 6–15: MetalBar job in progress
+        // Tick 6–15: Producing 2nd MetalBar
         ticker.RunTicks(10);
-        Assert.Equal(1, storage.GetAmount(ResourceType.MetalBar)); // Not yet finished, but we had one in the chamber
-        Assert.Equal(0, storage.GetAmount(ResourceType.ComputerPart));
+        Assert.Equal(1, storage.GetAmount(metalBar));
+        Assert.Equal(0, storage.GetAmount(computerPart));
 
         // Tick 16: MetalBar completes
         ticker.RunTicks(1);
-        Assert.Equal(2, storage.GetAmount(ResourceType.MetalBar)); // Now we have both
-        Assert.Equal(0, storage.GetAmount(ResourceType.ComputerPart));
+        Assert.Equal(2, storage.GetAmount(metalBar));
+        Assert.Equal(0, storage.GetAmount(computerPart));
 
-        // Tick 17: Add ComputerPart workshop
-        facility.AddWorkshops(ResourceType.ComputerPart, 1);
+        // Tick 17: Add workshop for ComputerPart
+        facility.AddWorkshops(computerPartRecipe, 1);
 
-        // Tick 17–26: ComputerPart job progresses
+        // Tick 17–26: Producing ComputerPart
         ticker.RunTicks(10);
-        Assert.Equal(0, storage.GetAmount(ResourceType.ComputerPart));
+        Assert.Equal(0, storage.GetAmount(computerPart));
 
-        // Tick 27: ComputerPart completes
+        // Tick 27: Done
         ticker.RunTicks(1);
-        Assert.Equal(1, storage.GetAmount(ResourceType.ComputerPart));
+        Assert.Equal(1, storage.GetAmount(computerPart));
     }
 
     [Fact]
     public void ProductionFacilities_Cooperate_ViaManualTransport()
     {
-        // Station A: Ore + EnergyCell → MetalBar
-        var storageA = new ResourceStorage();
-        storageA.Add(ResourceType.Ore, 2);
-        storageA.Add(ResourceType.EnergyCell, 1);
+        var gameData = new GameData();
 
-        var stationA = new ProductionFacility(storageA, new Dictionary<ResourceType, int>
+        var ore = gameData.GetResource("ore");
+        var energy = gameData.GetResource("energy_cell");
+        var plastic = gameData.GetResource("plastic");
+        var metalBar = gameData.GetResource("metal_bar");
+        var computerPart = gameData.GetResource("computer_part");
+
+        var metalBarRecipe = gameData.Recipes.Values.First(r => r.Output == metalBar);
+        var computerPartRecipe = gameData.Recipes.Values.First(r => r.Output == computerPart);
+
+        // Station A: MetalBar
+        var storageA = new ResourceStorage();
+        storageA.Add(ore, 2);
+        storageA.Add(energy, 1);
+        var stationA = new ProductionFacility(storageA, new Dictionary<RecipeDef, int>
         {
-            { ResourceType.MetalBar, 1 },
+            { metalBarRecipe, 1 },
         });
 
-        // Station B: MetalBar + Plastic → ComputerPart
+        // Station B: ComputerPart
         var storageB = new ResourceStorage();
-        storageB.Add(ResourceType.Plastic, 1); // waiting for MetalBar
-        storageB.Add(ResourceType.MetalBar, 1);
-
-        var stationB = new ProductionFacility(storageB, new Dictionary<ResourceType, int>
+        storageB.Add(plastic, 1);
+        storageB.Add(metalBar, 1); // Preloaded to simulate partial progress
+        var stationB = new ProductionFacility(storageB, new Dictionary<RecipeDef, int>
         {
-            { ResourceType.ComputerPart, 1 },
+            { computerPartRecipe, 1 },
         });
 
         var ticker = new Ticker();
         ticker.Register(stationA);
         ticker.Register(stationB);
 
-        // Run 10 ticks — MetalBar still in progress
+        // Tick 1–10: MetalBar in progress
         ticker.RunTicks(10);
-        Assert.Equal(0, storageA.GetAmount(ResourceType.MetalBar));
-        Assert.Equal(0, storageB.GetAmount(ResourceType.ComputerPart));
+        Assert.Equal(0, storageA.GetAmount(metalBar));
+        Assert.Equal(0, storageB.GetAmount(computerPart));
 
-        // Tick 11 — MetalBar is produced
+        // Tick 11: MetalBar complete
         ticker.RunTicks(1);
-        Assert.Equal(1, storageA.GetAmount(ResourceType.MetalBar));
+        Assert.Equal(1, storageA.GetAmount(metalBar));
 
-        // Transporter manually moves the MetalBar to Station B
-        var transferred = storageA.Consume(ResourceType.MetalBar, 1);
+        // Transport from A → B
+        var transferred = storageA.Consume(metalBar, 1);
         Assert.True(transferred);
-        storageB.Add(ResourceType.MetalBar, 1);
+        storageB.Add(metalBar, 1);
 
-        // Tick 12–21 — ComputerPart is being worked on
+        // Tick 12–21: ComputerPart in progress
         ticker.RunTicks(9);
-        Assert.Equal(0, storageB.GetAmount(ResourceType.ComputerPart));
+        Assert.Equal(0, storageB.GetAmount(computerPart));
 
-        // Tick 22 — still in progress
+        // Tick 22: still not done
         ticker.RunTicks(1);
-        Assert.Equal(0, storageB.GetAmount(ResourceType.ComputerPart)); // not yet done
+        Assert.Equal(0, storageB.GetAmount(computerPart));
 
-        // Tick 23 — ComputerPart completes
+        // Tick 23: done
         ticker.RunTicks(1);
-        Assert.Equal(1, storageB.GetAmount(ResourceType.ComputerPart)); // ✅ done
+        Assert.Equal(1, storageB.GetAmount(computerPart));
     }
-
 }
