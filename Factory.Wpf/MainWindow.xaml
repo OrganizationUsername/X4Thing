@@ -15,8 +15,10 @@
                 <TextBox Text="{Binding TickCount }" />
             </GroupBox>
             <Button Content="Tick" Width="80" Margin="10" Command="{Binding TickCommand}" />
+            <CheckBox Content="Auto Tick" Margin="0 10 0 0" IsChecked="{Binding IsAutoTicking}" />
         </StackPanel>
 
+        <TextBlock DockPanel.Dock="Bottom" MaxHeight="150" Text="{Binding DebugText}" />
         <wpf:SKElement x:Name="Canvas" PaintSurface="OnPaintSurface" IsHitTestVisible="True" IgnorePixelScaling="True" />
     </DockPanel>
 </Window>

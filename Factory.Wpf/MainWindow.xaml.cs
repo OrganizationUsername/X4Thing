@@ -8,6 +8,7 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Numerics;
 using System.Windows.Input;
+using System.Windows.Threading;
 
 namespace Factory.Wpf;
 
@@ -146,39 +147,43 @@ public partial class MainWindow
             canvas.DrawText(entity.IsStation ? "Station" : "Ship", x + 20, y + 5, SKTextAlign.Left, _font, _textPaint);
         }
 
-        /*
-        if (_viewModel.HoveredEntity is { } hovered) //Really shitty tooltip
-        {
-            var tooltip = $"{hovered.Name} @ ({hovered.X:0}, {hovered.Y:0})";
-            var x = hovered.X + 20;
-            var y = hovered.Y - 20;
 
-            var bgPaint = new SKPaint
-            {
-                Color = SKColors.Gold,
-                Style = SKPaintStyle.Fill,
-                IsAntialias = true
-            };
+        //ShowTooltip(canvas);
 
-            // Measure text using the font
-            _font.MeasureText(tooltip, out var bounds);
-
-            // Offset bounds to match text position
-            bounds.Offset(x, y);
-
-            // Inflate for padding
-            bounds.Inflate(4, 4);
-
-            // Draw tooltip background and text
-            canvas.DrawRect(bounds, bgPaint);
-            canvas.DrawText(tooltip, x, y + _font.Size, SKTextAlign.Left, _font, _textPaint);
-        }
-        */
 
         if (_debugPoint == default) { return; }
 
         canvas.DrawCircle(_debugPoint.X, _debugPoint.Y, 3, _highlightPaint); //draw a small circle at _debugPoint
         canvas.DrawText("Click", _debugPoint.X + 5, _debugPoint.Y + 5, SKTextAlign.Left, _font, _textPaint);
+    }
+
+    private void ShowTooltip(SKCanvas canvas)
+    {
+        if (_viewModel.HoveredEntity is not { } hovered) { return; } //Really shitty tooltip
+
+        var tooltip = $"{hovered.Name} @ ({hovered.X:0}, {hovered.Y:0})";
+        var x = hovered.X + 20;
+        var y = hovered.Y - 20;
+
+        var bgPaint = new SKPaint
+        {
+            Color = SKColors.Gold,
+            Style = SKPaintStyle.Fill,
+            IsAntialias = true
+        };
+
+        // Measure text using the font
+        _font.MeasureText(tooltip, out var bounds);
+
+        // Offset bounds to match text position
+        bounds.Offset(x, y);
+
+        // Inflate for padding
+        bounds.Inflate(4, 4);
+
+        // Draw tooltip background and text
+        canvas.DrawRect(bounds, bgPaint);
+        canvas.DrawText(tooltip, x, y + _font.Size, SKTextAlign.Left, _font, _textPaint);
     }
 }
 
@@ -197,10 +202,11 @@ public partial class MainViewModel : ObservableObject
     public event Action? ResetCanvasView;
 
     [ObservableProperty] private Entity? _hoveredEntity;
+    [ObservableProperty] private bool _isAutoTicking;
 
     private readonly GameData _gameData;
     private readonly Ticker _ticker;
-
+    private readonly DispatcherTimer _dispatcherTimer;
     public MainViewModel()
     {
         _gameData = GameData.GetDefault();
@@ -210,9 +216,14 @@ public partial class MainViewModel : ObservableObject
 
         foreach (var f in _gameData.Facilities) _ticker.Register(f);
         foreach (var t in _gameData.Transporters) _ticker.Register(t);
+
+        _dispatcherTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100), };
+        _dispatcherTimer.Tick += (_, _) => Tick();
     }
 
     [ObservableProperty] private int _tickCount = 1;
+
+    partial void OnIsAutoTickingChanged(bool value) { if (value) { _dispatcherTimer.Start(); } else { _dispatcherTimer.Stop(); } }
 
     public ObservableCollection<Entity> Entities { get; set; } = [];
 
@@ -256,14 +267,24 @@ public partial class MainViewModel : ObservableObject
         ResetCanvasView?.Invoke();
     }
 
+    [ObservableProperty] private string _debugText = string.Empty;
+
+    private int _cumulativeTick = 0;
     [RelayCommand]
     private void Tick()
     {
         _ticker.RunTicks(TickCount);
+
+        foreach (var log in _gameData.GetAllLogs(_cumulativeTick))
+        {
+            Trace.WriteLine(log.Format());
+        }
+        DebugText = string.Join(Environment.NewLine, _gameData.GetAllLogs(_cumulativeTick).Select(l => l.Format()));
+        _cumulativeTick += TickCount;
         var transporters = _gameData.Transporters;
         foreach (var entity in Entities.Where(e => !e.IsStation))
         {
-            var corresponding = transporters.First();
+            var corresponding = transporters.First(); //There's no way this is right.
             entity.X = corresponding.Position.X;
             entity.Y = corresponding.Position.Y;
         }

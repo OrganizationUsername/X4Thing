@@ -26,6 +26,14 @@ public class GameData : IUpdatable
         return gameData;
     }
 
+    public List<ILogLine> GetAllLogs(int tick)
+    {
+        var allLogs = new List<ILogLine>();
+        foreach (var facility in Facilities) { allLogs.AddRange(facility.LogLines.Where(l => l.Tick >= tick)); }
+        foreach (var transporter in Transporters) { allLogs.AddRange(transporter.LogLines.Where(l => l.Tick >= tick)); }
+        return [.. allLogs.OrderBy(l => l.Tick),];
+    }
+
     public List<ILogLine> GetAllLogs()
     {
         var allLogs = new List<ILogLine>();
