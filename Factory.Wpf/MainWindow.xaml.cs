@@ -120,35 +120,19 @@ public partial class MainWindow
         canvas.Clear(SKColors.White);
         canvas.Translate(_pan.X, _pan.Y);
         canvas.Scale(_zoom);
-        foreach (var entity in _viewModel.Entities.OfType<FacilityEntity>())
-        {
-            var x = entity.X;
-            var y = entity.Y;
+        DrawFacilities(canvas);
+        DrawTransporters(canvas);
 
-            var rect = new SKRect(x - 15, y - 15, x + 15, y + 15);
-            canvas.DrawRect(rect, _stationFill);
-            if (entity.IsSelected) canvas.DrawRect(rect, _highlightPaint);
-            canvas.DrawRect(rect, _border); //canvas.DrawCircle(x, y, 2, _highlightPaint);
-            canvas.DrawText(entity.Name, x + 20, y + 5, SKTextAlign.Left, _font, _textPaint);
-            canvas.DrawText(entity.Inventory, x + 20, y + 15, SKTextAlign.Left, _font, _textPaint);
-            //then, for each ProductionProgresses, show a small bar, 50 pixels wide showing the progress
-            var yOffset = 0;
-            foreach (var progress in entity.ProductionProgresses)
-            {
-                //var progressRect = new SKRect(x - 15, y + 30 + yOffset, x + 35, y + 35);
-                //canvas.DrawRect(progressRect, _stationFill);
-                //canvas.DrawRect(progressRect, _highlightPaint);
-                //canvas.DrawRect(progressRect, _border); //canvas.DrawCircle(x, y, 2, _highlightPaint);
-                //canvas.DrawText($"{progress.RecipeId} ({progress.Progress:0.00})", x + 20, y + 35, SKTextAlign.Left, _font, _textPaint);
-                //fill bar according to 
-                var percentage = 1d * progress.Tick / progress.Duration;
-                var fillRect = new SKRect(x - 15, y + 30 + yOffset, x - 15 + (float)(percentage * 50), y + 35);
-                canvas.DrawRect(fillRect, _highlightPaint);
+        //ShowTooltip(canvas);
 
-                yOffset += 15;
-            }
-        }
+        if (_debugPoint == default) { return; }
 
+        canvas.DrawCircle(_debugPoint.X, _debugPoint.Y, 3, _highlightPaint); //draw a small circle at _debugPoint
+        canvas.DrawText("Click", _debugPoint.X + 5, _debugPoint.Y + 5, SKTextAlign.Left, _font, _textPaint);
+    }
+
+    private void DrawTransporters(SKCanvas canvas)
+    {
         foreach (var entity in _viewModel.Entities.OfType<TransporterEntity>())
         {
             var x = entity.X;
@@ -160,13 +144,43 @@ public partial class MainWindow
             canvas.DrawText(entity.Carrying, x + 20, y + 15, SKTextAlign.Left, _font, _textPaint);
             canvas.DrawText(entity.Destination, x + 20, y + 25, SKTextAlign.Left, _font, _textPaint);
         }
+    }
 
-        //ShowTooltip(canvas);
+    private void DrawFacilities(SKCanvas canvas)
+    {
+        foreach (var entity in _viewModel.Entities.OfType<FacilityEntity>())
+        {
+            var x = entity.X;
+            var y = entity.Y;
 
-        if (_debugPoint == default) { return; }
+            var rect = new SKRect(x - 15, y - 15, x + 15, y + 15);
+            canvas.DrawRect(rect, _stationFill);
+            if (entity.IsSelected) canvas.DrawRect(rect, _highlightPaint);
+            canvas.DrawRect(rect, _border);
 
-        canvas.DrawCircle(_debugPoint.X, _debugPoint.Y, 3, _highlightPaint); //draw a small circle at _debugPoint
-        canvas.DrawText("Click", _debugPoint.X + 5, _debugPoint.Y + 5, SKTextAlign.Left, _font, _textPaint);
+            canvas.DrawText(entity.Name, x + 20, y + 5, SKTextAlign.Left, _font, _textPaint);
+            canvas.DrawText(entity.Inventory, x + 20, y + 15, SKTextAlign.Left, _font, _textPaint);
+
+            float barWidth = 50;
+            float barHeight = 1;
+            float spacing = 5;
+            float yOffset = 0;
+
+            foreach (var progress in entity.ProductionProgresses)
+            {
+                var barX = x - barWidth / 2;
+                var barY = y + 20 + yOffset;
+
+                var fillPercent = Math.Clamp(progress.Tick / (float)progress.Duration, 0f, 1f);
+                var fillRect = new SKRect(barX, barY, barX + fillPercent * barWidth, barY + barHeight);
+                canvas.DrawRect(fillRect, _highlightPaint);
+                var recipeName = progress.Recipe.Output;
+                //write the name of the recipe to the right of the bar
+                canvas.DrawText(recipeName.DisplayName, barX + barWidth + 5, barY + 5, SKTextAlign.Left, _font, _textPaint);
+
+                yOffset += barHeight + spacing;
+            }
+        }
     }
 
     [UsedImplicitly]
