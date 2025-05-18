@@ -73,7 +73,7 @@ public class GameData : IUpdatable
 
     public void AssignTransportersToBestTrades(int currentTick)
     {
-        foreach (var transporter in Transporters.Where(t => !t.HasActiveTask()))
+        foreach (var transporter in Transporters.Where(t => !t.HasActiveTask() && t.TotalHull > 0))
         {
             var trade = FindBestTrade();
             if (trade is null) continue;

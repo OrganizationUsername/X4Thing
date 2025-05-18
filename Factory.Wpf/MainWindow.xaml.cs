@@ -97,7 +97,7 @@ public partial class MainWindow
     }
     private void Canvas_MouseWheel(object sender, MouseWheelEventArgs e)
     {
-        var scaledFont = new SKFont { Size = 14 * _zoom, };
+        var scaledFont = new SKFont { Size = 14 * _zoom, }; //Should get this working at some point
         _textPaint = new SKPaint { Color = SKColors.Black, IsAntialias = true, };
         var delta = e.Delta > 0 ? 1.1f : 0.9f; _zoom *= delta; var pos = e.GetPosition(Canvas); var mouse = new SKPoint((float)pos.X, (float)pos.Y); _pan = new SKPoint(mouse.X - (mouse.X - _pan.X) * delta, mouse.Y - (mouse.Y - _pan.Y) * delta); Canvas.InvalidateVisual();
     }
@@ -108,6 +108,8 @@ public partial class MainWindow
     private readonly SKPaint _shipFill = new() { IsAntialias = true, Style = SKPaintStyle.Fill, Color = SKColors.OrangeRed, };
     private readonly SKPaint _border = new() { IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = 2, Color = SKColors.Black, };
     private readonly SKPaint _highlightPaint = new() { IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = 4, Color = SKColors.Magenta, };
+    //need gray for _deadShipFill
+    private readonly SKPaint _deadShipFill = new() { IsAntialias = true, Style = SKPaintStyle.Fill, Color = SKColors.Gray, };
     private void OnPaintSurface(object sender, SKPaintSurfaceEventArgs e)
     {
         var canvas = e.Surface.Canvas;
@@ -116,6 +118,7 @@ public partial class MainWindow
         canvas.Scale(_zoom);
         DrawFacilities(canvas);
         DrawTransporters(canvas);
+        DrawFighters(canvas);
 
         //ShowTooltip(canvas);
 
@@ -125,13 +128,26 @@ public partial class MainWindow
         canvas.DrawText("Click", _debugPoint.X + 5, _debugPoint.Y + 5, SKTextAlign.Left, _font, _textPaint);
     }
 
+    private void DrawFighters(SKCanvas canvas)
+    {
+        foreach (var entity in _viewModel.Entities.OfType<FighterEntity>())
+        {
+            var x = entity.X;
+            var y = entity.Y;
+            canvas.DrawCircle(x, y, 15, _shipFill);
+            if (entity.IsSelected) { canvas.DrawCircle(x, y, 15, _highlightPaint); }
+            canvas.DrawCircle(x, y, 15, _border);
+            canvas.DrawText(entity.Name, x + 20, y + 5, SKTextAlign.Left, _font, _textPaint);
+        }
+    }
+
     private void DrawTransporters(SKCanvas canvas)
     {
         foreach (var entity in _viewModel.Entities.OfType<TransporterEntity>())
         {
             var x = entity.X;
             var y = entity.Y;
-            canvas.DrawCircle(x, y, 15, _shipFill);
+            canvas.DrawCircle(x, y, 15, entity.HullRemaining > 0 ? _shipFill : _deadShipFill);
             if (entity.IsSelected) canvas.DrawCircle(x, y, 15, _highlightPaint);
             canvas.DrawCircle(x, y, 15, _border);
             canvas.DrawText(entity.Name, x + 20, y + 5, SKTextAlign.Left, _font, _textPaint);

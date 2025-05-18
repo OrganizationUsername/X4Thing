@@ -81,7 +81,6 @@ public class FighterTests
         Assert.NotEqual(transporter, fighter.Target);
     }
 
-
     [Fact]
     public void GameData_AutoAssignsFighter_ToValuableTransporter()
     {
@@ -201,7 +200,6 @@ public class FighterTests
         Assert.Empty(damageLogs);
         Assert.False(destroyed);
     }
-
 
     [Fact]
     public void Fighter_StopsChasing_WhenTransporter_NoLongerValuable()

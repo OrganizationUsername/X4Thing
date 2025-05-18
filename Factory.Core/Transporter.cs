@@ -22,7 +22,6 @@ public class Fighter : IUpdatable, IHasName
 
     public void Tick(int tick)
     {
-
         if (!IsValidTarget(Target))
         {
             if (Target is not null)
@@ -57,7 +56,7 @@ public class Fighter : IUpdatable, IHasName
         }
     }
 
-    private bool IsValidTarget(Transporter? t) => t is not null && GetTransportValue(t) >= MinimumValue;
+    private bool IsValidTarget(Transporter? t) => t is not null && GetTransportValue(t) >= MinimumValue && t.TotalHull > 0;
 
 
     public void SetTarget(Transporter target, int currentTick)

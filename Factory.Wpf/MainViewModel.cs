@@ -29,6 +29,7 @@ public partial class MainViewModel : ObservableObject
 
         foreach (var f in _gameData.Facilities) _ticker.Register(f);
         foreach (var t in _gameData.Transporters) _ticker.Register(t);
+        foreach (var f in _gameData.Fighters) _ticker.Register(f);
 
         _dispatcherTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100), };
         _dispatcherTimer.Tick += (_, _) => Tick();
@@ -49,10 +50,10 @@ public partial class MainViewModel : ObservableObject
         var sand = _gameData.GetResource("sand");
         var plastic = _gameData.GetResource("plastic");
 
-        var a = new ProductionFacility(new ResourceStorage(), new() { { _gameData.GetRecipe("recipe_metal_bar"), 2 }, }) { Name = "A", Position = new Vector2(150, 150), };
-        var b = new ProductionFacility(new ResourceStorage(), new() { { _gameData.GetRecipe("recipe_computer_part"), 1 }, }) { Name = "B", Position = new Vector2(95, 230), };
-        var c = new ProductionFacility(new ResourceStorage(), new() { { _gameData.GetRecipe("recipe_silicon_wafer"), 2 }, }) { Name = "C", Position = new Vector2(30, 60), };
-        var d = new ProductionFacility(new ResourceStorage(), new() { { _gameData.GetRecipe("recipe_ai_module"), 1 }, }) { Name = "D", Position = new Vector2(165, 20), };
+        var a = new ProductionFacility(new ResourceStorage(), new() { { _gameData.GetRecipe("recipe_metal_bar"), 2 }, }) { Name = "A", Position = new Vector2(150, 150), PlayerId = 1, };
+        var b = new ProductionFacility(new ResourceStorage(), new() { { _gameData.GetRecipe("recipe_computer_part"), 1 }, }) { Name = "B", Position = new Vector2(95, 230), PlayerId = 1, };
+        var c = new ProductionFacility(new ResourceStorage(), new() { { _gameData.GetRecipe("recipe_silicon_wafer"), 2 }, }) { Name = "C", Position = new Vector2(30, 60), PlayerId = 1, };
+        var d = new ProductionFacility(new ResourceStorage(), new() { { _gameData.GetRecipe("recipe_ai_module"), 1 }, }) { Name = "D", Position = new Vector2(165, 20), PlayerId = 1, };
 
         a.GetStorage().Add(ore, 100);
         a.GetStorage().Add(energy, 100);
@@ -62,8 +63,9 @@ public partial class MainViewModel : ObservableObject
 
         _gameData.Facilities.AddRange([a, b, c, d,]);
 
-        _gameData.Transporters.Add(new Transporter { Id = 1, Position = new Vector2(30, 30), SpeedPerTick = 1f, MaxVolume = 50f, Name = "1", });
-        _gameData.Transporters.Add(new Transporter { Id = 2, Position = new Vector2(230, 230), SpeedPerTick = 1f, MaxVolume = 50f, Name = "2", });
+        _gameData.Transporters.Add(new Transporter { Id = 1, Position = new Vector2(30, 30), SpeedPerTick = 1f, MaxVolume = 50f, Name = "1", PlayerId = 1, TotalHull = 100, });
+        _gameData.Transporters.Add(new Transporter { Id = 2, Position = new Vector2(230, 230), SpeedPerTick = 1f, MaxVolume = 50f, Name = "2", PlayerId = 1, TotalHull = 100, });
+        _gameData.Fighters.Add(new Fighter { Id = 1, Position = new Vector2(400, 400), SpeedPerTick = 1f, Name = "Fighter", PlayerId = 2, MinimumValue = 1, });
 
         foreach (var f in _gameData.Facilities)
         {
@@ -73,6 +75,10 @@ public partial class MainViewModel : ObservableObject
         foreach (var t in _gameData.Transporters)
         {
             Entities.Add(new TransporterEntity { X = t.Position.X, Y = t.Position.Y, IsStation = false, Name = t.Name, });
+        }
+        foreach (var f in _gameData.Fighters)
+        {
+            Entities.Add(new FighterEntity { X = f.Position.X, Y = f.Position.Y, IsStation = false, Name = f.Name, });
         }
     }
 
@@ -90,8 +96,21 @@ public partial class MainViewModel : ObservableObject
         _cumulativeTick += TickStep;
         UpdateTransporters();
         UpdateFacilities();
+        UpdateFighters();
+
 
         RequestRedraw?.Invoke();
+    }
+
+    private void UpdateFighters()
+    {
+        foreach (var entity in Entities.OfType<FighterEntity>())
+        {
+            var matching = _gameData.Fighters.FirstOrDefault(f => f.Name == entity.Name);
+            if (matching is null) continue;
+            entity.X = matching.Position.X;
+            entity.Y = matching.Position.Y;
+        }
     }
 
     private void UpdateFacilities()
@@ -145,6 +164,7 @@ public partial class MainViewModel : ObservableObject
 
             entity.X = matching.Position.X;
             entity.Y = matching.Position.Y;
+            entity.HullRemaining = matching.TotalHull;
         }
     }
 }
@@ -153,15 +173,25 @@ public partial class Entity : ObservableObject
 {
     [ObservableProperty] private float _x;
     [ObservableProperty] private float _y;
-    [ObservableProperty] private bool _isStation;
+    [ObservableProperty] private bool _isStation; //Get rid of this later
     [ObservableProperty] private bool _isSelected;
     [ObservableProperty] private string _name = string.Empty;
 }
 
-public partial class TransporterEntity : Entity
+public partial class Ship : Entity
+{
+    public double HullRemaining { get; set; }
+}
+
+public partial class TransporterEntity : Ship
 {
     [ObservableProperty] private string _carrying = string.Empty;
     [ObservableProperty] private string _destination = string.Empty;
+}
+
+public partial class FighterEntity : Ship
+{
+
 }
 
 public partial class FacilityEntity : Entity

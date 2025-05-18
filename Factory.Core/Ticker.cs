@@ -14,7 +14,7 @@ public class Ticker
         CurrentTick++;
         foreach (var tickable in _tickables)
         {
-            GameData?.Tick(CurrentTick);
+            GameData?.Tick(CurrentTick); //This probably shouldn't be in the loop
             tickable.Tick(CurrentTick);
         }
     }
