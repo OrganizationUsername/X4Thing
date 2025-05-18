@@ -1,6 +1,5 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using FactoryCli;
 using SkiaSharp;
 using SkiaSharp.Views.Desktop;
 using SkiaSharp.Views.WPF;
@@ -9,6 +8,8 @@ using System.Diagnostics;
 using System.Numerics;
 using System.Windows.Input;
 using System.Windows.Threading;
+using Factory.Core;
+using JetBrains.Annotations;
 
 namespace Factory.Wpf;
 
@@ -112,12 +113,12 @@ public partial class MainWindow
     }
     private void Canvas_MouseWheel(object sender, MouseWheelEventArgs e) { var delta = e.Delta > 0 ? 1.1f : 0.9f; _zoom *= delta; var pos = e.GetPosition(Canvas); var mouse = new SKPoint((float)pos.X, (float)pos.Y); _pan = new SKPoint(mouse.X - (mouse.X - _pan.X) * delta, mouse.Y - (mouse.Y - _pan.Y) * delta); Canvas.InvalidateVisual(); }
 
-    private readonly SKFont _font = new SKFont { Size = 14, };
-    private readonly SKPaint _textPaint = new SKPaint { Color = SKColors.Black, IsAntialias = true, }; //'SKPaint.TextSize' is obsolete: 'Use SKFont.Size instead.'
-    private readonly SKPaint _stationFill = new SKPaint { IsAntialias = true, Style = SKPaintStyle.Fill, Color = SKColors.SteelBlue, };
-    private readonly SKPaint _shipFill = new SKPaint { IsAntialias = true, Style = SKPaintStyle.Fill, Color = SKColors.OrangeRed, };
-    private readonly SKPaint _border = new SKPaint { IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = 2, Color = SKColors.Black, };
-    private readonly SKPaint _highlightPaint = new SKPaint { IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = 4, Color = SKColors.Magenta, };
+    private readonly SKFont _font = new() { Size = 14, };
+    private readonly SKPaint _textPaint = new() { Color = SKColors.Black, IsAntialias = true, };
+    private readonly SKPaint _stationFill = new() { IsAntialias = true, Style = SKPaintStyle.Fill, Color = SKColors.SteelBlue, };
+    private readonly SKPaint _shipFill = new() { IsAntialias = true, Style = SKPaintStyle.Fill, Color = SKColors.OrangeRed, };
+    private readonly SKPaint _border = new() { IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = 2, Color = SKColors.Black, };
+    private readonly SKPaint _highlightPaint = new() { IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = 4, Color = SKColors.Magenta, };
     private void OnPaintSurface(object sender, SKPaintSurfaceEventArgs e)
     {
         var canvas = e.Surface.Canvas;
@@ -157,6 +158,7 @@ public partial class MainWindow
         canvas.DrawText("Click", _debugPoint.X + 5, _debugPoint.Y + 5, SKTextAlign.Left, _font, _textPaint);
     }
 
+    [UsedImplicitly]
     private void ShowTooltip(SKCanvas canvas)
     {
         if (_viewModel.HoveredEntity is not { } hovered) { return; } //Really shitty tooltip
@@ -189,8 +191,8 @@ public partial class MainWindow
 
 public partial class Entity : ObservableObject
 {
-    [ObservableProperty] private float x;
-    [ObservableProperty] private float y;
+    [ObservableProperty] private float _x;
+    [ObservableProperty] private float _y;
     [ObservableProperty] private bool _isStation;
     [ObservableProperty] private bool _isSelected;
     [ObservableProperty] private string _name = string.Empty;
@@ -269,7 +271,7 @@ public partial class MainViewModel : ObservableObject
 
     [ObservableProperty] private string _debugText = string.Empty;
 
-    private int _cumulativeTick = 0;
+    private int _cumulativeTick;
     [RelayCommand]
     private void Tick()
     {

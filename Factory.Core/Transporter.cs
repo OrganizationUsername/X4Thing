@@ -1,6 +1,6 @@
 ﻿using System.Numerics;
 
-namespace FactoryCli;
+namespace Factory.Core;
 
 //ToDo: Make it so the logs from the production facilities and transporters are stored in a sortable way so I can sort them by tick and see what happened at a certain time.
 //ToDo: Make it so when transporters take or drop off product that they only take as much as they can hold.
@@ -9,10 +9,7 @@ public interface IUpdatable
 {
     void Tick(int currentTick);
 }
-public interface IHasName
-{
-    public string Name { get; set; }
-}
+public interface IHasName;
 
 public class Resource
 {

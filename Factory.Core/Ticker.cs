@@ -1,4 +1,4 @@
-﻿namespace FactoryCli;
+﻿namespace Factory.Core;
 
 public class Ticker
 {

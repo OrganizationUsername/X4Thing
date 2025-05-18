@@ -1,7 +1,7 @@
-﻿using FactoryCli;
-using System.Numerics;
+﻿using System.Numerics;
+using Factory.Core;
 
-namespace FactoryTests;
+namespace Factory.Tests;
 
 public class FactoryStrategyTests
 {

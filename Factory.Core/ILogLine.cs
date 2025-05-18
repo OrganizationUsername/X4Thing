@@ -1,6 +1,6 @@
 ﻿using System.Numerics;
 
-namespace FactoryCli;
+namespace Factory.Core;
 
 public interface ILogLine
 {

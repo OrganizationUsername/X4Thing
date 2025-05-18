@@ -1,4 +1,4 @@
-﻿namespace FactoryCli;
+﻿namespace Factory.Cli;
 
 internal class Program
 {

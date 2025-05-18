@@ -1,7 +1,7 @@
 ﻿using System.Numerics;
-using FactoryCli;
+using Factory.Core;
 
-namespace FactoryTests;
+namespace Factory.Tests;
 
 public class TransporterTests
 {
