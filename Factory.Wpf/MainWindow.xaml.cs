@@ -1,14 +1,9 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
-using SkiaSharp;
+﻿using SkiaSharp;
 using SkiaSharp.Views.Desktop;
 using SkiaSharp.Views.WPF;
-using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Numerics;
 using System.Windows.Input;
-using System.Windows.Threading;
-using Factory.Core;
 using JetBrains.Annotations;
 
 namespace Factory.Wpf;
@@ -125,32 +120,48 @@ public partial class MainWindow
         canvas.Clear(SKColors.White);
         canvas.Translate(_pan.X, _pan.Y);
         canvas.Scale(_zoom);
-
-        foreach (var entity in _viewModel.Entities)
+        foreach (var entity in _viewModel.Entities.OfType<FacilityEntity>())
         {
             var x = entity.X;
             var y = entity.Y;
 
-            if (entity.IsStation)
+            var rect = new SKRect(x - 15, y - 15, x + 15, y + 15);
+            canvas.DrawRect(rect, _stationFill);
+            if (entity.IsSelected) canvas.DrawRect(rect, _highlightPaint);
+            canvas.DrawRect(rect, _border); //canvas.DrawCircle(x, y, 2, _highlightPaint);
+            canvas.DrawText(entity.Name, x + 20, y + 5, SKTextAlign.Left, _font, _textPaint);
+            canvas.DrawText(entity.Inventory, x + 20, y + 15, SKTextAlign.Left, _font, _textPaint);
+            //then, for each ProductionProgresses, show a small bar, 50 pixels wide showing the progress
+            var yOffset = 0;
+            foreach (var progress in entity.ProductionProgresses)
             {
-                var rect = new SKRect(x - 15, y - 15, x + 15, y + 15);
-                canvas.DrawRect(rect, _stationFill);
-                if (entity.IsSelected) canvas.DrawRect(rect, _highlightPaint);
-                canvas.DrawRect(rect, _border); //canvas.DrawCircle(x, y, 2, _highlightPaint);
-            }
-            else
-            {
-                canvas.DrawCircle(x, y, 15, _shipFill);
-                if (entity.IsSelected) canvas.DrawCircle(x, y, 15, _highlightPaint);
-                canvas.DrawCircle(x, y, 15, _border); //canvas.DrawCircle(x, y, 2, _highlightPaint);
-            }
+                //var progressRect = new SKRect(x - 15, y + 30 + yOffset, x + 35, y + 35);
+                //canvas.DrawRect(progressRect, _stationFill);
+                //canvas.DrawRect(progressRect, _highlightPaint);
+                //canvas.DrawRect(progressRect, _border); //canvas.DrawCircle(x, y, 2, _highlightPaint);
+                //canvas.DrawText($"{progress.RecipeId} ({progress.Progress:0.00})", x + 20, y + 35, SKTextAlign.Left, _font, _textPaint);
+                //fill bar according to 
+                var percentage = 1d * progress.Tick / progress.Duration;
+                var fillRect = new SKRect(x - 15, y + 30 + yOffset, x - 15 + (float)(percentage * 50), y + 35);
+                canvas.DrawRect(fillRect, _highlightPaint);
 
-            canvas.DrawText(entity.IsStation ? "Station" : "Ship", x + 20, y + 5, SKTextAlign.Left, _font, _textPaint);
+                yOffset += 15;
+            }
         }
 
+        foreach (var entity in _viewModel.Entities.OfType<TransporterEntity>())
+        {
+            var x = entity.X;
+            var y = entity.Y;
+            canvas.DrawCircle(x, y, 15, _shipFill);
+            if (entity.IsSelected) canvas.DrawCircle(x, y, 15, _highlightPaint);
+            canvas.DrawCircle(x, y, 15, _border); //canvas.DrawCircle(x, y, 2, _highlightPaint);
+            canvas.DrawText(entity.Name, x + 20, y + 5, SKTextAlign.Left, _font, _textPaint);
+            canvas.DrawText(entity.Carrying, x + 20, y + 15, SKTextAlign.Left, _font, _textPaint);
+            canvas.DrawText(entity.Destination, x + 20, y + 25, SKTextAlign.Left, _font, _textPaint);
+        }
 
         //ShowTooltip(canvas);
-
 
         if (_debugPoint == default) { return; }
 
@@ -186,111 +197,5 @@ public partial class MainWindow
         // Draw tooltip background and text
         canvas.DrawRect(bounds, bgPaint);
         canvas.DrawText(tooltip, x, y + _font.Size, SKTextAlign.Left, _font, _textPaint);
-    }
-}
-
-public partial class Entity : ObservableObject
-{
-    [ObservableProperty] private float _x;
-    [ObservableProperty] private float _y;
-    [ObservableProperty] private bool _isStation;
-    [ObservableProperty] private bool _isSelected;
-    [ObservableProperty] private string _name = string.Empty;
-}
-
-public partial class MainViewModel : ObservableObject
-{
-    public event Action? RequestRedraw;
-    public event Action? ResetCanvasView;
-
-    [ObservableProperty] private Entity? _hoveredEntity;
-    [ObservableProperty] private bool _isAutoTicking;
-
-    private readonly GameData _gameData;
-    private readonly Ticker _ticker;
-    private readonly DispatcherTimer _dispatcherTimer;
-    public MainViewModel()
-    {
-        _gameData = GameData.GetDefault();
-        _ticker = new Ticker { GameData = _gameData, };
-
-        SetupSimulation();
-
-        foreach (var f in _gameData.Facilities) _ticker.Register(f);
-        foreach (var t in _gameData.Transporters) _ticker.Register(t);
-
-        _dispatcherTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100), };
-        _dispatcherTimer.Tick += (_, _) => Tick();
-    }
-
-    [ObservableProperty] private int _tickCount = 1;
-
-    partial void OnIsAutoTickingChanged(bool value) { if (value) { _dispatcherTimer.Start(); } else { _dispatcherTimer.Stop(); } }
-
-    public ObservableCollection<Entity> Entities { get; set; } = [];
-
-    private void SetupSimulation()
-    {
-        var ore = _gameData.GetResource("ore");
-        var energy = _gameData.GetResource("energy_cell");
-        var sand = _gameData.GetResource("sand");
-        var plastic = _gameData.GetResource("plastic");
-
-        var a = new ProductionFacility(new ResourceStorage(), new() { { _gameData.GetRecipe("recipe_metal_bar"), 2 }, }) { Name = "A", Position = new Vector2(150, 150), };
-        var b = new ProductionFacility(new ResourceStorage(), new() { { _gameData.GetRecipe("recipe_computer_part"), 1 }, }) { Name = "B", Position = new Vector2(95, 230), };
-        var c = new ProductionFacility(new ResourceStorage(), new() { { _gameData.GetRecipe("recipe_silicon_wafer"), 2 }, }) { Name = "C", Position = new Vector2(30, 60), };
-        var d = new ProductionFacility(new ResourceStorage(), new() { { _gameData.GetRecipe("recipe_ai_module"), 1 }, }) { Name = "D", Position = new Vector2(165, 20), };
-
-        a.GetStorage().Add(ore, 100);
-        a.GetStorage().Add(energy, 100);
-        b.GetStorage().Add(plastic, 10);
-        c.GetStorage().Add(sand, 100);
-        c.GetStorage().Add(energy, 100);
-
-        _gameData.Facilities.AddRange([a, b, c, d,]);
-
-        var transporter = new Transporter { Id = 1, Position = new Vector2(30, 30), SpeedPerTick = 1f, MaxVolume = 50f, };
-        _gameData.Transporters.Add(transporter);
-
-        foreach (var f in _gameData.Facilities)
-        {
-            Entities.Add(new Entity { X = f.Position.X, Y = f.Position.Y, IsStation = true, Name = f.Name, });
-        }
-
-        foreach (var t in _gameData.Transporters)
-        {
-            Entities.Add(new Entity { X = t.Position.X, Y = t.Position.Y, IsStation = false, Name = t.Name, });
-        }
-    }
-
-    [RelayCommand]
-    private void ResetView()
-    {
-        ResetCanvasView?.Invoke();
-    }
-
-    [ObservableProperty] private string _debugText = string.Empty;
-
-    private int _cumulativeTick;
-    [RelayCommand]
-    private void Tick()
-    {
-        _ticker.RunTicks(TickCount);
-
-        foreach (var log in _gameData.GetAllLogs(_cumulativeTick))
-        {
-            Trace.WriteLine(log.Format());
-        }
-        DebugText = string.Join(Environment.NewLine, _gameData.GetAllLogs(_cumulativeTick).Select(l => l.Format()));
-        _cumulativeTick += TickCount;
-        var transporters = _gameData.Transporters;
-        foreach (var entity in Entities.Where(e => !e.IsStation))
-        {
-            var corresponding = transporters.First(); //There's no way this is right.
-            entity.X = corresponding.Position.X;
-            entity.Y = corresponding.Position.Y;
-        }
-
-        RequestRedraw?.Invoke();
     }
 }

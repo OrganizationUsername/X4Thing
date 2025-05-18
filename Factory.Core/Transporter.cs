@@ -47,6 +47,7 @@ public class Transporter : IUpdatable, IHasName
     private TransportTask? _currentTask;
     private Vector2? _target;
 
+    public string? GetCurrentDestination => _currentTask?.Destination.Name;
     public bool HasActiveTask() => _currentTask != null || _taskQueue.Count > 0;
 
     public void AssignTask(ProductionFacility from, ProductionFacility to, List<ResourceAmount> cargo, int? currentTick = null)

@@ -13,7 +13,7 @@ public class DefaultPullRequestStrategy : IPullRequestStrategy
         {
             foreach (var (resource, perJob) in recipe.Inputs)
             {
-                var current = facility.GetStorage().GetAmount(resource);
+                var current = facility.GetStorage().GetTotalIncludingIncoming(resource);
                 if (current < perJob) { yield return (resource, perJob - current); }
             }
         }

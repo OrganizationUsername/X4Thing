@@ -27,6 +27,7 @@ public class ProductionFacility : IUpdatable, IHasName
         }
     }
 
+    public Dictionary<Recipe, List<ProductionJob>> GetProductionJobs() => _activeJobs;
     public ResourceStorage GetStorage() => _storage;
     public Dictionary<Recipe, int> GetWorkshops() => _workshops;
     public IPullRequestStrategy PullRequestStrategy { get; set; } = new DefaultPullRequestStrategy();
@@ -95,7 +96,7 @@ public class ProductionFacility : IUpdatable, IHasName
     }
 
 
-    private class ProductionJob
+    public class ProductionJob
     {
         public int Elapsed;
     }
@@ -163,6 +164,16 @@ public class ResourceStorage
 {
     private readonly Dictionary<Resource, int> _resources = new();
     private readonly Dictionary<Resource, int> _incoming = new();
+
+    public List<string> GetInventory()
+    {
+        var inventory = new List<string>();
+        foreach (var (resource, amount) in _resources)
+        {
+            inventory.Add($"{resource.DisplayName}: {amount}");
+        }
+        return inventory;
+    }
 
     public Dictionary<Resource, int> GetAll() => new(_resources);
 
