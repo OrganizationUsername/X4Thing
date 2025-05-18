@@ -5,29 +5,70 @@ namespace Factory.Core;
 //ToDo: Make it so the logs from the production facilities and transporters are stored in a sortable way so I can sort them by tick and see what happened at a certain time.
 //ToDo: Make it so when transporters take or drop off product that they only take as much as they can hold.
 
-public interface IUpdatable
+public class Fighter : IUpdatable, IHasName
 {
-    void Tick(int currentTick);
-}
-public interface IHasName;
+    //it looks like we should have another class of `IFlyable`
+    public int Id { get; set; }
+    public string Name { get; set; } = "Fighter";
+    public Vector2 Position { get; set; }
+    public float SpeedPerTick { get; set; } = 2f;
+    public float AttackRange { get; set; } = 10f;
+    public float AttackDamage { get; set; } = 10f;
+    public float MinimumValue { get; set; } = 20f;
+    public int PlayerId { get; set; } = 0;
+    public List<ILogLine> LogLines { get; } = [];
 
-public class Resource
-{
-    public string Id { get; init; } = "";
-    public string DisplayName { get; init; } = "";
-    public float BaseValue { get; init; } = 1.0f;
-    public float Volume { get; init; } = 1.0f;
+    public Transporter? Target { get; private set; }
 
-    public override string ToString() => DisplayName;
-}
-public class Recipe
-{
-    public string Id { get; init; } = "";
-    public Resource Output { get; init; } = null!;
-    public int OutputAmount { get; init; }
-    public Dictionary<Resource, int> Inputs { get; init; } = new();
-    public int Duration { get; init; }
-    public float Benefit { get; init; } //kind of a heuristic to help show that creating these things in-house is worth it because it gets us closer to some economic/endProduct goal
+    public void Tick(int tick)
+    {
+
+        if (!IsValidTarget(Target))
+        {
+            Target = null;
+        }
+
+        // Acquire target if none
+        if (Target == null || !IsValidTarget(Target))
+        {
+            //Target = FindTarget(); //it should be assigned a target by gameData
+        }
+
+        //Each fighter will also have a transporter following it. Its job is to pick up what's dropped and take it to the other faction, maybe.
+
+        if (Target == null) { return; }
+
+        // Move toward target
+        var toTarget = Target.Position - Position;
+        var distance = toTarget.Length();
+
+        if (distance <= AttackRange)
+        {
+            Attack(Target, tick);
+        }
+        else
+        {
+            var direction = Vector2.Normalize(toTarget);
+            Position += direction * MathF.Min(SpeedPerTick, distance);
+        }
+    }
+
+    private bool IsValidTarget(Transporter? t) => t is not null && GetTransportValue(t) >= MinimumValue;
+
+
+    public void SetTarget(Transporter target, int currentTick)
+    {
+        Target = target;
+        LogLines.Add(new FighterTargetAssignedLog(currentTick, Id, target.Id, target.Position));
+    }
+
+    private float GetTransportValue(Transporter t) => t.Carrying.Sum(r => r.Amount * r.Resource.BaseValue);
+
+    private void Attack(Transporter transporter, int tick)
+    {
+        var theyDied = transporter.TakeDamage(AttackDamage, tick, this);
+        LogLines.Add(new EntityAttackedLog(tick, Id, AttackDamage, transporter.Position, Name));
+    }
 }
 
 public class Transporter : IUpdatable, IHasName
@@ -38,7 +79,7 @@ public class Transporter : IUpdatable, IHasName
     public int Id { get; set; } = 0;
     public string Name { get; set; } = "Transporter";
     public float MaxVolume { get; set; } = 10f;
-
+    public float TotalHull { get; set; } = 100f;
     public List<ILogLine> LogLines { get; } = [];
 
     public List<ResourceAmount> Carrying { get; } = [];
@@ -165,34 +206,24 @@ public class Transporter : IUpdatable, IHasName
 
     private void Deliver(int tick, TransportTask task)
     {
-        // Keep track of which items were NOT delivered in full
-        var failed = new List<ResourceAmount>();
 
-        // Track items that were successfully delivered
-        var actualDelivered = new List<ResourceAmount>();
+        var failed = new List<ResourceAmount>(); // Keep track of which items were NOT delivered in full
 
-        // Loop over all the resources this task is supposed to deliver
-        foreach (var taskItem in task.Cargo)
+
+        var actualDelivered = new List<ResourceAmount>(); // Track items that were successfully delivered
+
+
+        foreach (var taskItem in task.Cargo) // Loop over all the resources this task is supposed to deliver
         {
-            // Try to find this resource in the transporter’s current inventory
-            var carried = Carrying.FirstOrDefault(c => c.Resource == taskItem.Resource);
 
-            // If not found, assume it has 0 available
-            var available = carried?.Amount ?? 0;
-
-            // We'll deliver as much as we can, up to the requested amount
-            var toDeliver = Math.Min(available, taskItem.Amount);
-
-            // If we can deliver anything at all
-            if (toDeliver > 0)
+            var carried = Carrying.FirstOrDefault(c => c.Resource == taskItem.Resource); // Try to find this resource in the transporter’s current inventory
+            var available = carried?.Amount ?? 0; // If not found, assume it has 0 available
+            var toDeliver = Math.Min(available, taskItem.Amount); // We'll deliver as much as we can, up to the requested amount
+            if (toDeliver > 0) // If we can deliver anything at all
             {
-                // Send it to the destination facility
-                task.Destination.ReceiveImport(taskItem.Resource, toDeliver, tick, this);
-
-                // Log the successful delivery
-                actualDelivered.Add(new ResourceAmount(taskItem.Resource, toDeliver));
+                task.Destination.ReceiveImport(taskItem.Resource, toDeliver, tick, this); // Send it to the destination facility
+                actualDelivered.Add(new ResourceAmount(taskItem.Resource, toDeliver)); // Log the successful delivery
                 LogLines.Add(new DeliveryLog(tick, Id, task.Destination.Position, [new(taskItem.Resource, toDeliver)]));
-
                 carried!.Amount -= toDeliver; // Subtract the delivered amount from what the transporter is carrying
             }
             if (toDeliver >= taskItem.Amount) { continue; } // If we couldn't deliver the full requested amount, record what was missing
@@ -213,6 +244,24 @@ public class Transporter : IUpdatable, IHasName
         Carrying.RemoveAll(item => item.Amount == 0); // Clean up inventory — remove any resource entries with 0 quantity left
         _currentTask = null; // Clear the current task and target so the transporter can move on
         _target = null;
+    }
+
+    public bool TakeDamage(float attackDamage, int currentTick, IHasName hasName)
+    {
+        TotalHull -= attackDamage;
+        LogLines.Add(new TransporterDamagedLog(currentTick, Id, attackDamage, Position, hasName.Name));
+        if (TotalHull <= 0)
+        {
+            LogLines.Add(new TransporterDestroyedLog(currentTick, Id, Position));
+            //gameData.RemoveTransporter(this);
+            //remove current task and empty cargo
+            _currentTask = null;
+            //note all wares lost in a logline
+            foreach (var item in Carrying) { LogLines.Add(new TransporterLostCargoLog(currentTick, Id, item.Resource.Id, item.Amount)); }
+            Carrying.Clear();
+            return true;
+        }
+        return false;
     }
 }
 

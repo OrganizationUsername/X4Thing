@@ -8,6 +8,7 @@ public interface ILogLine
     string Format();
 }
 
+public interface IFighterLog;
 public interface ITransporterLog;
 public interface IProductionFacilityLog;
 
@@ -20,6 +21,56 @@ public class TransportReceivedLog(int tick, int facilityId, string resourceId, i
     public Vector2 Position { get; } = position;
     public Transporter From { get; } = from;
     public string Format() => $"[Tick {Tick:D4}] Received {Amount} of {ResourceId} from {From.Name} at {Position}";
+}
+
+//LogLines.Add(new TransporterDestroyedLog(currentTick, Id, Position));
+public class TransporterDestroyedLog(int tick, int transporterId, Vector2 position) : ILogLine, ITransporterLog
+{
+    public int Tick { get; } = tick;
+    public int TransporterId { get; } = transporterId;
+    public Vector2 Position { get; } = position;
+    public string Format() => $"[Tick {Tick:D4}] Transporter {TransporterId} destroyed at {Position}";
+}
+//LogLines.Add(new TransporterLostCargoLog(currentTick, Id, item.Resource.Id, item.Amount));
+public class TransporterLostCargoLog(int tick, int transporterId, string resourceId, int amount) : ILogLine, ITransporterLog
+{
+    public int Tick { get; } = tick;
+    public int TransporterId { get; } = transporterId;
+    public string ResourceId { get; } = resourceId;
+    public int Amount { get; } = amount;
+    public string Format() => $"[Tick {Tick:D4}] Transporter {TransporterId} lost cargo: {Amount} of {ResourceId}";
+}
+
+
+public class TransporterDamagedLog(int tick, int transporterId, float damage, Vector2 position, string? name) : ILogLine, ITransporterLog
+{
+    public int Tick { get; } = tick;
+    public int TransporterId { get; } = transporterId;
+    public float Damage { get; } = damage;
+    public Vector2 Position { get; } = position;
+    public string? Name { get; } = name;
+    public string Format() => $"[Tick {Tick:D4}] Transporter {TransporterId} damaged ({Damage}) at {Position} by {Name ?? "Unknown"}";
+}
+
+//LogLines.Add(new FighterTargetAssignedLog(currentTick, Id, target.Id, target.Position));
+public class FighterTargetAssignedLog(int tick, int transporterId, int targetId, Vector2 targetPosition) : ILogLine, IFighterLog
+{
+    public int Tick { get; } = tick;
+    public int TransporterId { get; } = transporterId;
+    public int TargetId { get; } = targetId;
+    public Vector2 TargetPosition { get; } = targetPosition;
+    public string Format() => $"[Tick {Tick:D4}] Fighter {TransporterId} assigned to target {TargetId} at {TargetPosition}";
+}
+
+
+public class EntityAttackedLog(int tick, int transporterId, float damage, Vector2 position, string? name) : ILogLine, IFighterLog
+{
+    public int Tick { get; } = tick;
+    public int TransporterId { get; } = transporterId;
+    public float Damage { get; } = damage;
+    public Vector2 Position { get; } = position;
+    public string? Name { get; } = name;
+    public string Format() => $"[Tick {Tick:D4}] Transporter {TransporterId} hit ({Damage}) at {Position} by {Name ?? "Unknown"}";
 }
 
 public class ProductionCompletedLog(int tick, int facilityId, string resourceId, int amount, Vector2 position) : ILogLine, IProductionFacilityLog

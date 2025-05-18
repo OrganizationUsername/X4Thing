@@ -8,6 +8,7 @@ public class GameData : IUpdatable
     public Dictionary<string, Recipe> Recipes { get; } = new();
     public List<ProductionFacility> Facilities { get; } = [];
     public List<Transporter> Transporters { get; } = [];
+    public List<Fighter> Fighters { get; } = [];
 
     // ReSharper disable once EmptyStatement
     private GameData() {; }
@@ -39,6 +40,8 @@ public class GameData : IUpdatable
         var allLogs = new List<ILogLine>();
         foreach (var facility in Facilities) { allLogs.AddRange(facility.LogLines); }
         foreach (var transporter in Transporters) { allLogs.AddRange(transporter.LogLines); }
+        foreach (var fighter in Fighters) { allLogs.AddRange(fighter.LogLines); }
+
         return [.. allLogs.OrderBy(l => l.Tick),];
     }
 
@@ -47,6 +50,7 @@ public class GameData : IUpdatable
     public void Tick(int currentTick)
     {
         AssignTransportersToBestTrades(currentTick);
+        //Should try to assign fighters here
     }
 
     public void AssignTransportersToBestTrades(int currentTick)
