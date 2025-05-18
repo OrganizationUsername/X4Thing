@@ -1,0 +1,15 @@
+﻿<Window x:Class="Factory.Wpf.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:wpf="clr-namespace:SkiaSharp.Views.WPF;assembly=SkiaSharp.Views.WPF"
+        xmlns:wpf1="clr-namespace:Factory.Wpf"
+        mc:Ignorable="d"
+        Title="MainWindow" Height="450" Width="800"
+        d:DataContext="{wpf1:MainViewModel}">
+    <DockPanel>
+        <Button DockPanel.Dock="Right" Content="Tick" Width="80" Margin="10" Command="{Binding TickCommand}" />
+        <wpf:SKElement PaintSurface="OnPaintSurface" />
+    </DockPanel>
+</Window>

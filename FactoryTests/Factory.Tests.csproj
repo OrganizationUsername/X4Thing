@@ -17,7 +17,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\FactoryCli\FactoryCli.csproj" />
+    <ProjectReference Include="..\Factory.Core\Factory.Core.csproj" />
+    <ProjectReference Include="..\FactoryCli\Factory.Cli.csproj" />
   </ItemGroup>
 
   <ItemGroup>
