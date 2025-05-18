@@ -95,30 +95,40 @@ public partial class MainViewModel : ObservableObject
         foreach (var entity in Entities.OfType<FacilityEntity>())
         {
             var matching = _gameData.Facilities.FirstOrDefault(f => f.Name == entity.Name);
-            if (matching is null) { continue; }
+            if (matching is null) continue;
+
             entity.X = matching.Position.X;
             entity.Y = matching.Position.Y;
+
             var inventoryLines = matching.GetStorage().GetInventory();
             entity.Inventory = string.Join(", ", inventoryLines);
-            //populate production progress
+
             entity.ProductionProgresses.Clear();
-            var productionJobs = matching.GetProductionJobs();
-            foreach (var (recipe, jobs) in productionJobs)
+
+            var allWorkshops = matching.GetWorkshops();
+            var activeJobs = matching.GetProductionJobs();
+
+            foreach (var (recipe, totalWorkshops) in allWorkshops)
             {
+                var jobs = activeJobs.TryGetValue(recipe, out var j) ? j : [];
+                var activeCount = jobs.Count;
+                var idleCount = totalWorkshops - activeCount;
+
+                // Add active jobs
                 foreach (var job in jobs)
                 {
-                    entity.ProductionProgresses.Add(new ProductionProgress
-                    {
-                        Tick = job.Elapsed,
-                        Duration = recipe.Duration,
-                        Recipe = recipe,
-                    });
+                    entity.ProductionProgresses.Add(new ProductionProgress { Tick = job.Elapsed, Duration = recipe.Duration, Recipe = recipe, });
+                }
+
+                // Add idle "placeholder" jobs
+                for (var i = 0; i < idleCount; i++)
+                {
+                    entity.ProductionProgresses.Add(new ProductionProgress { Tick = 0, Duration = recipe.Duration, Recipe = recipe, });
                 }
             }
-
-
         }
     }
+
 
     private void UpdateTransporters()
     {

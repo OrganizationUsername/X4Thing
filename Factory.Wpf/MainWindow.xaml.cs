@@ -163,7 +163,7 @@ public partial class MainWindow
 
             float barWidth = 50;
             float barHeight = 1;
-            float spacing = 5;
+            float spacing = 15;
             float yOffset = 0;
 
             foreach (var progress in entity.ProductionProgresses)
