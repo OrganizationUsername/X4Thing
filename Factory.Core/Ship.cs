@@ -2,16 +2,15 @@
 
 namespace Factory.Core;
 
-public class Ship
+
+
+public class Ship : Entity
 {
-    public int Id { get; set; }
-    public string Name { get; set; } = "Ship";
+
     public double TotalHull { get; set; } = 100;
-    public Vector2 Position { get; set; }
-    public List<ILogLine> LogLines { get; } = [];
     public float SpeedPerTick { get; set; } = 1f;
     public List<ResourceAmount> Carrying { get; } = [];
-    public TransportTask? CurrentTask;
+    public IShipTask? CurrentTask;
     public bool TakeDamage(float attackDamage, int currentTick, IHasName hasName)
     {
         TotalHull -= attackDamage;

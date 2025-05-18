@@ -2,17 +2,21 @@
 
 namespace Factory.Core;
 
-public class ProductionFacility : IUpdatable, IHasName
+public class Entity
+{
+    public List<ILogLine> LogLines { get; } = [];
+    public int Id { get; set; }
+    public string Name { get; set; } = "Ship";
+    public Vector2 Position { get; set; }
+    public int PlayerId { get; set; } = 0; //for factionId later
+
+}
+
+public class ProductionFacility : Entity, IUpdatable, IHasName
 {
     private readonly ResourceStorage _storage;
     private readonly Dictionary<Recipe, int> _workshops;
     private readonly Dictionary<Recipe, List<ProductionJob>> _activeJobs;
-    public int PlayerId { get; set; } = 0; //for factionId later
-    public int Id { get; set; } = 0;
-    public string Name { get; set; } = "Production";
-    public List<ILogLine> LogLines { get; } = [];
-
-    public Vector2 Position { get; set; } = new(0, 0);
 
     public ProductionFacility(ResourceStorage storage, Dictionary<Recipe, int> recipeWorkshopAssignments)
     {

@@ -26,7 +26,7 @@ public class Recipe
     public string Id { get; init; } = "";
     public Resource Output { get; init; } = null!;
     public int OutputAmount { get; init; }
-    public Dictionary<Resource, int> Inputs { get; init; } = new();
+    public Dictionary<Resource, int> Inputs { get; init; } = [];
     public int Duration { get; init; }
     public float Benefit { get; init; } //kind of a heuristic to help show that creating these things in-house is worth it because it gets us closer to some economic/endProduct goal
 }

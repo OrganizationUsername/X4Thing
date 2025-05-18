@@ -217,9 +217,9 @@ public class GameData : IUpdatable
     {
         foreach (var facility in Facilities)
         {
-            foreach (var request in facility.GetPullRequests())
+            foreach (var (resource, amount) in facility.GetPullRequests())
             {
-                yield return (facility, request.resource, request.amount);
+                yield return (facility, resource: resource, amount: amount);
             }
         }
     }

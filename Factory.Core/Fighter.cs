@@ -7,7 +7,6 @@ public class Fighter : Ship, IUpdatable, IHasName
     public float AttackRange { get; set; } = 10f;
     public float AttackDamage { get; set; } = 10f;
     public float MinimumValue { get; set; } = 20f;
-    public int PlayerId { get; set; } = 0;
     public Ship? Target { get; private set; }
 
     public void Tick(int tick)

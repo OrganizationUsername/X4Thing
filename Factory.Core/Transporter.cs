@@ -7,11 +7,9 @@ namespace Factory.Core;
 
 public class Transporter : Ship, IUpdatable, IHasName
 {
-    public int PlayerId { get; set; } = 0;
     public float MaxVolume { get; set; } = 10f;
     private readonly Queue<TransportTask> _taskQueue = new();
     private Vector2? _target;
-
     public string? GetCurrentDestination => CurrentTask?.Destination.Name;
     public bool HasActiveTask() => CurrentTask != null || _taskQueue.Count > 0;
 
@@ -22,43 +20,6 @@ public class Transporter : Ship, IUpdatable, IHasName
         to.SayWhatsOnTheWay(cargo);
         _taskQueue.Enqueue(task);
         LogLines.Add(new TransportAssignedLog(currentTick ?? 0, Id, cargo.First().Resource.Id, cargo.Sum(x => x.Amount), from, to));
-    }
-
-    public void NewAssignTask(ProductionFacility source, ProductionFacility dest, List<ResourceAmount> cargo, int currentTick = 0)
-    {
-        var availableVolume = MaxVolume - Carrying.Sum(c => c.Resource.Volume * c.Amount);
-        var fitting = new List<ResourceAmount>();
-        var overflow = new List<ResourceAmount>();
-
-        foreach (var item in cargo)
-        {
-            var perUnitVol = item.Resource.Volume;
-            if (perUnitVol <= 0) continue;
-
-            var maxUnits = (int)(availableVolume / perUnitVol);
-            var assignAmount = Math.Min(maxUnits, item.Amount);
-
-            if (assignAmount > 0)
-            {
-                fitting.Add(new ResourceAmount(item.Resource, assignAmount));
-                availableVolume -= assignAmount * perUnitVol;
-            }
-
-            var remaining = item.Amount - assignAmount;
-            if (remaining > 0)
-            {
-                overflow.Add(new ResourceAmount(item.Resource, remaining));
-            }
-        }
-
-        if (fitting.Count > 0) { _taskQueue.Enqueue(new TransportTask(source, dest, fitting)); }
-
-        if (overflow.Count > 0)
-        {
-            // Optional: delay re-queueing for game balance purposes
-            _taskQueue.Enqueue(new TransportTask(source, dest, overflow));
-            LogLines.Add(new TransportSplitLog(tick: currentTick, transporterId: this.Id, originalCargo: cargo, assignedNow: fitting, remaining: overflow));
-        }
     }
 
     private float _distanceTraveled;
@@ -91,8 +52,9 @@ public class Transporter : Ship, IUpdatable, IHasName
         Position = _target.Value;
         _target = null;
 
-        if (!task.HasPickedUp) { PickUp(tick, task); }
-        else { Deliver(tick, task); }
+        if (task is not TransportTask t) { return; }
+        if (!t.HasPickedUp) { PickUp(tick, t); }
+        else { Deliver(tick, t); }
     }
 
     private void PickUp(int tick, TransportTask task)
@@ -103,17 +65,16 @@ public class Transporter : Ship, IUpdatable, IHasName
         foreach (var item in task.Cargo)
         {
             var volumePerUnit = item.Resource.Volume;
-            if (volumePerUnit <= 0) continue;
+            if (volumePerUnit <= 0) { continue; }
 
             var maxUnits = (int)(remainingVolume / volumePerUnit);
-            if (maxUnits == 0) break;
+            if (maxUnits == 0) { break; }
 
             var amountToTake = Math.Min(item.Amount, maxUnits);
 
             if (amountToTake > 0 && task.Source.TryExport(item.Resource, amountToTake, tick, this))
             {
-                var existing = Carrying.FirstOrDefault(x => x.Resource == item.Resource);
-                if (existing != null) { existing.Amount += amountToTake; }
+                if (Carrying.FirstOrDefault(x => x.Resource == item.Resource) is { } existingResourceAmount) { existingResourceAmount.Amount += amountToTake; }
                 else { Carrying.Add(new ResourceAmount(item.Resource, amountToTake)); }
                 remainingVolume -= amountToTake * volumePerUnit;
 
@@ -130,13 +91,8 @@ public class Transporter : Ship, IUpdatable, IHasName
 
     private void Deliver(int tick, TransportTask task)
     {
-
         var failed = new List<ResourceAmount>(); // Keep track of which items were NOT delivered in full
-
-
         var actualDelivered = new List<ResourceAmount>(); // Track items that were successfully delivered
-
-
         foreach (var taskItem in task.Cargo) // Loop over all the resources this task is supposed to deliver
         {
 
@@ -179,7 +135,13 @@ public class ResourceAmount(Resource resource, int amount)
     public override string ToString() => $"{Amount} x {Resource.Id}";
 }
 
-public class TransportTask(ProductionFacility source, ProductionFacility dest, List<ResourceAmount> cargo)
+public interface IShipTask
+{
+    public ProductionFacility Source { get; }
+    public ProductionFacility Destination { get; }
+}
+
+public class TransportTask(ProductionFacility source, ProductionFacility dest, List<ResourceAmount> cargo) : IShipTask
 {
     public ProductionFacility Source { get; } = source;
     public ProductionFacility Destination { get; } = dest;
