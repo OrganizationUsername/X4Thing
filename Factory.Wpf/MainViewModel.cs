@@ -20,6 +20,7 @@ public partial class MainViewModel : ObservableObject
     private readonly GameData _gameData;
     private readonly Ticker _ticker;
     private readonly DispatcherTimer _dispatcherTimer;
+
     public MainViewModel()
     {
         _gameData = GameData.GetDefault();
@@ -27,9 +28,7 @@ public partial class MainViewModel : ObservableObject
 
         SetupSimulation();
 
-        foreach (var f in _gameData.Facilities) _ticker.Register(f);
-        foreach (var t in _gameData.Transporters) _ticker.Register(t);
-        foreach (var f in _gameData.Fighters) _ticker.Register(f);
+        _ticker.TryToRegisterEverything();
 
         _dispatcherTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100), };
         _dispatcherTimer.Tick += (_, _) => Tick();
@@ -97,7 +96,6 @@ public partial class MainViewModel : ObservableObject
         UpdateTransporters();
         UpdateFacilities();
         UpdateFighters();
-
 
         RequestRedraw?.Invoke();
     }

@@ -8,7 +8,6 @@ public class Ticker
     public void Register(IUpdatable tickable) => _tickables.Add(tickable);
     public GameData? GameData { get; set; }
 
-
     public void Tick()
     {
         CurrentTick++;
@@ -22,5 +21,13 @@ public class Ticker
     public void RunTicks(int count)
     {
         for (var i = 0; i < count; i++) { Tick(); }
+    }
+
+    public void TryToRegisterEverything()
+    {
+        if (GameData == null) { return; }
+        foreach (var f in GameData.Facilities) Register(f);
+        foreach (var t in GameData.Transporters) Register(t);
+        foreach (var f in GameData.Fighters) Register(f);
     }
 }
