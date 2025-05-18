@@ -11,10 +11,10 @@ public class FighterTests
         var gameData = GameData.GetDefault();
         var aiModule = gameData.GetResource("ai_module");
 
-        var transporter = new Transporter { Id = 1, Name = "Target", Position = new Vector2(0, 0), TotalHull = 30f, MaxVolume = 100f, };
+        var transporter = new Transporter { Id = 1, Name = "Target", Position = new Vector2(0, 0), TotalHull = 30f, MaxVolume = 100f, PlayerId= 1, };
         transporter.Carrying.Add(new ResourceAmount(aiModule, 5)); // Value = 50 * 10 = 500
 
-        var fighter = new Fighter { Id = 99, Name = "Hunter", Position = new Vector2(50, 0), AttackDamage = 10f, SpeedPerTick = 10f, AttackRange = 5f, MinimumValue = 20f, };
+        var fighter = new Fighter { Id = 99, Name = "Hunter", Position = new Vector2(50, 0), AttackDamage = 10f, SpeedPerTick = 10f, AttackRange = 50f, MinimumValue = 20f, PlayerId = 2, };
 
         var ticker = new Ticker { GameData = gameData, };
         ticker.Register(fighter);
@@ -23,33 +23,30 @@ public class FighterTests
         gameData.Transporters.Add(transporter);
         gameData.Fighters.Add(fighter);
 
-        ticker.RunTicks(1);
+        ticker.Tick();
         fighter.SetTarget(transporter, ticker.CurrentTick);
 
         ticker.RunTicks(10); // should be more than enough to chase + destroy
 
         var logs = gameData.GetAllLogs().ToList();
         var destroyedLog = logs.OfType<TransporterDestroyedLog>().FirstOrDefault();
-        var lostCargoLogs = logs.OfType<TransporterLostCargoLog>().ToList();
+        var lostCargoLogs = logs.OfType<ShipLostCargoLog>().ToList();
 
         //var text = gameData.GetAllLogsFormatted();
         /*
+           [Tick 0001] Transporter 1 damaged (10) at <0, 0> by Hunter
            [Tick 0001] Fighter 99 assigned to target 1 at <0, 0>
-           [Tick 0007] Transporter 1 damaged (10) at <0, 0> by Hunter
-           [Tick 0007] Transporter 99 hit (10) at <0, 0> by Hunter
-           [Tick 0008] Transporter 1 damaged (10) at <0, 0> by Hunter
-           [Tick 0008] Transporter 99 hit (10) at <0, 0> by Hunter
-           [Tick 0009] Transporter 1 damaged (10) at <0, 0> by Hunter
-           [Tick 0009] Transporter 1 destroyed at <0, 0>
-           [Tick 0009] Transporter 1 lost cargo: 5 of ai_module
-           [Tick 0009] Transporter 99 hit (10) at <0, 0> by Hunter
-           [Tick 0010] Transporter 1 damaged (10) at <0, 0> by Hunter
-           [Tick 0010] Transporter 1 destroyed at <0, 0>
-           [Tick 0010] Transporter 99 hit (10) at <0, 0> by Hunter
-           [Tick 0011] Transporter 1 damaged (10) at <0, 0> by Hunter
-           [Tick 0011] Transporter 1 destroyed at <0, 0>
-           [Tick 0011] Transporter 99 hit (10) at <0, 0> by Hunter
-         */
+           [Tick 0001] Transporter 99 hit (10) at <0, 0> by Hunter
+           [Tick 0001] Fighter 99 assigned to target 1 at <0, 0>
+           [Tick 0002] Transporter 1 damaged (10) at <0, 0> by Hunter
+           [Tick 0002] Transporter 99 hit (10) at <0, 0> by Hunter
+           [Tick 0003] Transporter 1 damaged (10) at <0, 0> by Hunter
+           [Tick 0003] Transporter 1 destroyed at <0, 0>
+           [Tick 0003] Transporter 1 lost cargo: 5 of ai_module
+           [Tick 0003] Transporter 99 hit (10) at <0, 0> by Hunter
+           [Tick 0003] Transporter 1 destroyed at <0, 0>
+           [Tick 0004] Fighter 99 lost target 1 at <0, 0>
+        */
 
         Assert.NotNull(destroyedLog);
         Assert.Equal(transporter.Id, destroyedLog.TransporterId);

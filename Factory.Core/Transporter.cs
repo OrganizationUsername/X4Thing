@@ -5,98 +5,15 @@ namespace Factory.Core;
 //ToDo: Make it so the logs from the production facilities and transporters are stored in a sortable way so I can sort them by tick and see what happened at a certain time.
 //ToDo: Make it so when transporters take or drop off product that they only take as much as they can hold.
 
-public class Ship
-{
-    public double TotalHull { get; set; } = 100;
-}
-
-public class Fighter : Ship, IUpdatable, IHasName
-{
-    //it looks like we should have another class of `IFlyable`
-    public int Id { get; set; }
-    public string Name { get; set; } = "Fighter";
-    public Vector2 Position { get; set; }
-    public float SpeedPerTick { get; set; } = 2f;
-    public float AttackRange { get; set; } = 10f;
-    public float AttackDamage { get; set; } = 10f;
-    public float MinimumValue { get; set; } = 20f;
-    public int PlayerId { get; set; } = 0;
-    public List<ILogLine> LogLines { get; } = [];
-
-    public Transporter? Target { get; private set; }
-
-    public void Tick(int tick)
-    {
-        if (!IsValidTarget(Target))
-        {
-            if (Target is not null)
-            {
-                LogLines.Add(new FighterTargetLostLog(tick, Id, Target.Id, Target.Position));
-            }
-            Target = null;
-        }
-
-        // Acquire target if none
-        if (Target == null || !IsValidTarget(Target))
-        {
-            //Target = FindTarget(); //it should be assigned a target by gameData
-        }
-
-        //Each fighter will also have a transporter following it. Its job is to pick up what's dropped and take it to the other faction, maybe.
-
-        if (Target == null) { return; }
-
-        // Move toward target
-        var toTarget = Target.Position - Position;
-        var distance = toTarget.Length();
-
-        if (distance <= AttackRange)
-        {
-            Attack(Target, tick);
-        }
-        else
-        {
-            var direction = Vector2.Normalize(toTarget);
-            Position += direction * MathF.Min(SpeedPerTick, distance);
-        }
-    }
-
-    private bool IsValidTarget(Transporter? t) => t is not null && GetTransportValue(t) >= MinimumValue && t.TotalHull > 0;
-
-
-    public void SetTarget(Transporter target, int currentTick)
-    {
-        Target = target;
-        LogLines.Add(new FighterTargetAssignedLog(currentTick, Id, target.Id, target.Position));
-    }
-
-    public float GetTransportValue(Transporter t) => t.Carrying.Sum(r => r.Amount * r.Resource.BaseValue);
-
-    private void Attack(Transporter transporter, int tick)
-    {
-        var theyDied = transporter.TakeDamage(AttackDamage, tick, this);
-        LogLines.Add(new EntityAttackedLog(tick, Id, AttackDamage, transporter.Position, Name));
-    }
-}
-
 public class Transporter : Ship, IUpdatable, IHasName
 {
-    public Vector2 Position { get; set; }
-    public float SpeedPerTick { get; set; } = 1f;
     public int PlayerId { get; set; } = 0;
-    public int Id { get; set; } = 0;
-    public string Name { get; set; } = "Transporter";
     public float MaxVolume { get; set; } = 10f;
-    public List<ILogLine> LogLines { get; } = [];
-
-    public List<ResourceAmount> Carrying { get; } = [];
-
     private readonly Queue<TransportTask> _taskQueue = new();
-    private TransportTask? _currentTask;
     private Vector2? _target;
 
-    public string? GetCurrentDestination => _currentTask?.Destination.Name;
-    public bool HasActiveTask() => _currentTask != null || _taskQueue.Count > 0;
+    public string? GetCurrentDestination => CurrentTask?.Destination.Name;
+    public bool HasActiveTask() => CurrentTask != null || _taskQueue.Count > 0;
 
     public void AssignTask(ProductionFacility from, ProductionFacility to, List<ResourceAmount> cargo, int? currentTick = null)
     {
@@ -149,17 +66,17 @@ public class Transporter : Ship, IUpdatable, IHasName
 
     public void Tick(int tick)
     {
-        if (_currentTask is null)
+        if (CurrentTask is null)
         {
             if (_taskQueue.Count == 0) { return; }
 
-            _currentTask = _taskQueue.Dequeue();
-            _target = _currentTask.Source.Position;
+            CurrentTask = _taskQueue.Dequeue();
+            _target = CurrentTask.Source.Position;
         }
 
         if (_target is null) { return; }
 
-        var task = _currentTask!;
+        var task = CurrentTask!;
         var direction = _target.Value - Position;
         var distance = direction.Length();
 
@@ -200,7 +117,7 @@ public class Transporter : Ship, IUpdatable, IHasName
                 else { Carrying.Add(new ResourceAmount(item.Resource, amountToTake)); }
                 remainingVolume -= amountToTake * volumePerUnit;
 
-                LogLines.Add(new PickupLog(tick, Id, [new ResourceAmount(item.Resource, amountToTake),], _currentTask?.Source));
+                LogLines.Add(new PickupLog(tick, Id, [new ResourceAmount(item.Resource, amountToTake),], CurrentTask?.Source));
             }
             else
             {
@@ -249,26 +166,8 @@ public class Transporter : Ship, IUpdatable, IHasName
         }
 
         Carrying.RemoveAll(item => item.Amount == 0); // Clean up inventory — remove any resource entries with 0 quantity left
-        _currentTask = null; // Clear the current task and target so the transporter can move on
+        CurrentTask = null; // Clear the current task and target so the transporter can move on
         _target = null;
-    }
-
-    public bool TakeDamage(float attackDamage, int currentTick, IHasName hasName)
-    {
-        TotalHull -= attackDamage;
-        LogLines.Add(new TransporterDamagedLog(currentTick, Id, attackDamage, Position, hasName.Name));
-        if (TotalHull <= 0)
-        {
-            LogLines.Add(new TransporterDestroyedLog(currentTick, Id, Position));
-            //gameData.RemoveTransporter(this);
-            //remove current task and empty cargo
-            _currentTask = null;
-            //note all wares lost in a logline
-            foreach (var item in Carrying) { LogLines.Add(new TransporterLostCargoLog(currentTick, Id, item.Resource.Id, item.Amount)); }
-            Carrying.Clear();
-            return true;
-        }
-        return false;
     }
 }
 

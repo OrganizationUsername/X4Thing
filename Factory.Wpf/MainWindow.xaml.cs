@@ -85,7 +85,7 @@ public partial class MainWindow
         {
             var dx = entity.X - world.X;
             var dy = entity.Y - world.Y;
-            return entity.IsStation ? Math.Abs(dx) <= 15 && Math.Abs(dy) <= 15 : Math.Sqrt(dx * dx + dy * dy) <= 15;
+            return entity is FacilityEntity ? Math.Abs(dx) <= 15 && Math.Abs(dy) <= 15 : Math.Sqrt(dx * dx + dy * dy) <= 15;
         });
 
         if (hovered != _viewModel.HoveredEntity)
@@ -271,5 +271,5 @@ public partial class MainWindow
         contextMenu.IsOpen = true;
     }
 
-    private Entity? GetClickedEntity(SKPoint world) => _viewModel.Entities.FirstOrDefault(entity => { var dx = entity.X - world.X; var dy = entity.Y - world.Y; return entity.IsStation ? Math.Abs(dx) <= 15 && Math.Abs(dy) <= 15 : Math.Sqrt(dx * dx + dy * dy) <= 15; });
+    private Entity? GetClickedEntity(SKPoint world) => _viewModel.Entities.FirstOrDefault(entity => { var dx = entity.X - world.X; var dy = entity.Y - world.Y; return entity is FacilityEntity ? Math.Abs(dx) <= 15 && Math.Abs(dy) <= 15 : Math.Sqrt(dx * dx + dy * dy) <= 15; });
 }

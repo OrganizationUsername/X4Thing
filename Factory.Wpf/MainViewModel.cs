@@ -68,16 +68,16 @@ public partial class MainViewModel : ObservableObject
 
         foreach (var f in _gameData.Facilities)
         {
-            Entities.Add(new FacilityEntity { X = f.Position.X, Y = f.Position.Y, IsStation = true, Name = f.Name, });
+            Entities.Add(new FacilityEntity { X = f.Position.X, Y = f.Position.Y, Name = f.Name, });
         }
 
         foreach (var t in _gameData.Transporters)
         {
-            Entities.Add(new TransporterEntity { X = t.Position.X, Y = t.Position.Y, IsStation = false, Name = t.Name, HullRemaining = t.TotalHull, });
+            Entities.Add(new TransporterEntity { X = t.Position.X, Y = t.Position.Y, Name = t.Name, HullRemaining = t.TotalHull, });
         }
         foreach (var f in _gameData.Fighters)
         {
-            Entities.Add(new FighterEntity { X = f.Position.X, Y = f.Position.Y, IsStation = false, Name = f.Name, HullRemaining = f.TotalHull, });
+            Entities.Add(new FighterEntity { X = f.Position.X, Y = f.Position.Y, Name = f.Name, HullRemaining = f.TotalHull, });
         }
     }
 
@@ -150,7 +150,6 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
-
     private void UpdateTransporters()
     {
         foreach (var entity in Entities.OfType<TransporterEntity>())
@@ -171,7 +170,6 @@ public partial class Entity : ObservableObject
 {
     [ObservableProperty] private float _x;
     [ObservableProperty] private float _y;
-    [ObservableProperty] private bool _isStation; //Get rid of this later
     [ObservableProperty] private bool _isSelected;
     [ObservableProperty] private string _name = string.Empty;
 }

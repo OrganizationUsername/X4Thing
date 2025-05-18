@@ -31,8 +31,8 @@ public class TransporterDestroyedLog(int tick, int transporterId, Vector2 positi
     public Vector2 Position { get; } = position;
     public string Format() => $"[Tick {Tick:D4}] Transporter {TransporterId} destroyed at {Position}";
 }
-//LogLines.Add(new TransporterLostCargoLog(currentTick, Id, item.Resource.Id, item.Amount));
-public class TransporterLostCargoLog(int tick, int transporterId, string resourceId, int amount) : ILogLine, ITransporterLog
+//LogLines.Add(new ShipLostCargoLog(currentTick, Id, item.Resource.Id, item.Amount));
+public class ShipLostCargoLog(int tick, int transporterId, string resourceId, int amount) : ILogLine, ITransporterLog
 {
     public int Tick { get; } = tick;
     public int TransporterId { get; } = transporterId;
