@@ -3,8 +3,11 @@ using SkiaSharp.Views.Desktop;
 using SkiaSharp.Views.WPF;
 using System.Diagnostics;
 using System.Numerics;
+using System.Windows;
 using System.Windows.Input;
 using JetBrains.Annotations;
+using System.Windows.Controls.Primitives;
+using System.Windows.Controls;
 
 namespace Factory.Wpf;
 
@@ -49,21 +52,7 @@ public partial class MainWindow
 
         if (e.LeftButton != MouseButtonState.Pressed) { return; }
 
-        foreach (var entity in _viewModel.Entities)
-        {
-            var dx = entity.X - world.X;
-            var dy = entity.Y - world.Y;
-            var dist = Math.Sqrt(dx * dx + dy * dy);
-
-            Trace.WriteLine($"  → Entity @ ({entity.X}, {entity.Y}) | Δ=({dx:0.00}, {dy:0.00}) | Distance: {dist:0.00}");
-        }
-
-        var clicked = _viewModel.Entities.FirstOrDefault(entity =>
-        {
-            var dx = entity.X - world.X;
-            var dy = entity.Y - world.Y;
-            return entity.IsStation ? Math.Abs(dx) <= 15 && Math.Abs(dy) <= 15 : Math.Sqrt(dx * dx + dy * dy) <= 15;
-        });
+        var clicked = GetClickedEntity(world);
 
         foreach (var entity in _viewModel.Entities)
         {
@@ -106,10 +95,15 @@ public partial class MainWindow
         }
 
     }
-    private void Canvas_MouseWheel(object sender, MouseWheelEventArgs e) { var delta = e.Delta > 0 ? 1.1f : 0.9f; _zoom *= delta; var pos = e.GetPosition(Canvas); var mouse = new SKPoint((float)pos.X, (float)pos.Y); _pan = new SKPoint(mouse.X - (mouse.X - _pan.X) * delta, mouse.Y - (mouse.Y - _pan.Y) * delta); Canvas.InvalidateVisual(); }
+    private void Canvas_MouseWheel(object sender, MouseWheelEventArgs e)
+    {
+        var scaledFont = new SKFont { Size = 14 * _zoom, };
+        _textPaint = new SKPaint { Color = SKColors.Black, IsAntialias = true, };
+        var delta = e.Delta > 0 ? 1.1f : 0.9f; _zoom *= delta; var pos = e.GetPosition(Canvas); var mouse = new SKPoint((float)pos.X, (float)pos.Y); _pan = new SKPoint(mouse.X - (mouse.X - _pan.X) * delta, mouse.Y - (mouse.Y - _pan.Y) * delta); Canvas.InvalidateVisual();
+    }
 
     private readonly SKFont _font = new() { Size = 14, };
-    private readonly SKPaint _textPaint = new() { Color = SKColors.Black, IsAntialias = true, };
+    private SKPaint _textPaint = new() { Color = SKColors.Black, IsAntialias = true, };
     private readonly SKPaint _stationFill = new() { IsAntialias = true, Style = SKPaintStyle.Fill, Color = SKColors.SteelBlue, };
     private readonly SKPaint _shipFill = new() { IsAntialias = true, Style = SKPaintStyle.Fill, Color = SKColors.OrangeRed, };
     private readonly SKPaint _border = new() { IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = 2, Color = SKColors.Black, };
@@ -139,7 +133,7 @@ public partial class MainWindow
             var y = entity.Y;
             canvas.DrawCircle(x, y, 15, _shipFill);
             if (entity.IsSelected) canvas.DrawCircle(x, y, 15, _highlightPaint);
-            canvas.DrawCircle(x, y, 15, _border); //canvas.DrawCircle(x, y, 2, _highlightPaint);
+            canvas.DrawCircle(x, y, 15, _border);
             canvas.DrawText(entity.Name, x + 20, y + 5, SKTextAlign.Left, _font, _textPaint);
             canvas.DrawText(entity.Carrying, x + 20, y + 15, SKTextAlign.Left, _font, _textPaint);
             canvas.DrawText(entity.Destination, x + 20, y + 25, SKTextAlign.Left, _font, _textPaint);
@@ -155,30 +149,36 @@ public partial class MainWindow
 
             var rect = new SKRect(x - 15, y - 15, x + 15, y + 15);
             canvas.DrawRect(rect, _stationFill);
-            if (entity.IsSelected) canvas.DrawRect(rect, _highlightPaint);
+            if (entity.IsSelected) { canvas.DrawRect(rect, _highlightPaint); }
             canvas.DrawRect(rect, _border);
 
             canvas.DrawText(entity.Name, x + 20, y + 5, SKTextAlign.Left, _font, _textPaint);
-            canvas.DrawText(entity.Inventory, x + 20, y + 15, SKTextAlign.Left, _font, _textPaint);
+            var textYOffset = 20f;
+            if (_viewModel.ShowInventory || _viewModel.HoveredEntity == entity)
+            {
+                canvas.DrawText(entity.Inventory, x + 20, y + 20, SKTextAlign.Left, _font, _textPaint);
+                textYOffset += 15;
+            }
 
-            float barWidth = 50;
-            float barHeight = 1;
-            float spacing = 15;
-            float yOffset = 0;
+            if (!_viewModel.ShowAllProduction && _viewModel.HoveredEntity != entity) { continue; }
+
+            var spacing = 20f;
 
             foreach (var progress in entity.ProductionProgresses)
             {
-                var barX = x - barWidth / 2;
-                var barY = y + 20 + yOffset;
+                var recipeName = progress.Recipe.Output.DisplayName;
+                _font.MeasureText(recipeName, out var textBounds);
+                var textX = x + 20;
+                var barX = textX + textBounds.Width + 5;
+                var barY = y + textYOffset;
+                var barHeight = 5f;
+                var barWidth = 50f;
 
                 var fillPercent = Math.Clamp(progress.Tick / (float)progress.Duration, 0f, 1f);
                 var fillRect = new SKRect(barX, barY, barX + fillPercent * barWidth, barY + barHeight);
+                canvas.DrawText(recipeName, textX, barY + barHeight, SKTextAlign.Left, _font, _textPaint);
                 canvas.DrawRect(fillRect, _highlightPaint);
-                var recipeName = progress.Recipe.Output;
-                //write the name of the recipe to the right of the bar
-                canvas.DrawText(recipeName.DisplayName, barX + barWidth + 5, barY + 5, SKTextAlign.Left, _font, _textPaint);
-
-                yOffset += barHeight + spacing;
+                textYOffset += spacing;
             }
         }
     }
@@ -196,7 +196,7 @@ public partial class MainWindow
         {
             Color = SKColors.Gold,
             Style = SKPaintStyle.Fill,
-            IsAntialias = true
+            IsAntialias = true,
         };
 
         // Measure text using the font
@@ -212,4 +212,46 @@ public partial class MainWindow
         canvas.DrawRect(bounds, bgPaint);
         canvas.DrawText(tooltip, x, y + _font.Size, SKTextAlign.Left, _font, _textPaint);
     }
+
+    private void Canvas_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        var screenPoint = e.GetPosition(this); // Relative to the window
+
+        var contextMenu = new ContextMenu
+        {
+            Placement = PlacementMode.Relative,
+            PlacementTarget = this,
+            HorizontalOffset = screenPoint.X,
+            VerticalOffset = screenPoint.Y,
+            StaysOpen = false,
+        };
+
+        // Always-available menu item
+        var resetItem = new MenuItem { Header = "Reset View", };
+        resetItem.Click += (_, _) => ResetView();
+        contextMenu.Items.Add(resetItem);
+        contextMenu.Items.Add(new Separator());
+
+        // Check for clicked entity
+        var screen = e.GetPosition(Canvas).ToSKPoint();
+        var world = ScreenToWorld(screen);
+
+        var clickedEntity = GetClickedEntity(world);
+
+        if (clickedEntity is not null)
+        {
+            var inspectItem = new MenuItem { Header = $"Inspect {clickedEntity.Name}", };
+            inspectItem.Click += (_, _) => MessageBox.Show($"Inspecting {clickedEntity.Name}");
+            contextMenu.Items.Add(inspectItem);
+        }
+        else
+        {
+            var noneItem = new MenuItem { Header = "No entity here", IsEnabled = false, };
+            contextMenu.Items.Add(noneItem);
+        }
+
+        contextMenu.IsOpen = true;
+    }
+
+    private Entity? GetClickedEntity(SKPoint world) => _viewModel.Entities.FirstOrDefault(entity => { var dx = entity.X - world.X; var dy = entity.Y - world.Y; return entity.IsStation ? Math.Abs(dx) <= 15 && Math.Abs(dy) <= 15 : Math.Sqrt(dx * dx + dy * dy) <= 15; });
 }

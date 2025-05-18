@@ -9,16 +9,21 @@
         Title="MainWindow" Height="450" Width="800"
         d:DataContext="{d:DesignInstance Type=wpf1:MainViewModel}">
     <DockPanel>
+        <ScrollViewer DockPanel.Dock="Bottom" MaxHeight="150" >
+            <TextBlock Text="{Binding DebugText}" />
+        </ScrollViewer>
         <StackPanel DockPanel.Dock="Right">
-            <Button Content="Reset" Width="80" Margin="10" Command="{Binding ResetViewCommand}" />
+            <Button Content="Reset View" Width="80" Margin="10" Command="{Binding ResetViewCommand}" />
             <GroupBox Header="TickCount">
                 <TextBox Text="{Binding TickStep }" />
             </GroupBox>
             <Button Content="Tick" Width="80" Margin="10" Command="{Binding TickCommand}" />
             <CheckBox Content="Auto Tick" Margin="0 10 0 0" IsChecked="{Binding IsAutoTicking}" />
+            <CheckBox Content="ShowAllProduction" Margin="0 10 0 0" IsChecked="{Binding ShowAllProduction}" />
+            <CheckBox Content="ShowInventory" Margin="0 10 0 0" IsChecked="{Binding ShowInventory}" />
         </StackPanel>
 
-        <TextBlock DockPanel.Dock="Bottom" MaxHeight="150" Text="{Binding DebugText}" />
-        <wpf:SKElement x:Name="Canvas" PaintSurface="OnPaintSurface" IsHitTestVisible="True" IgnorePixelScaling="True" />
+        <wpf:SKElement x:Name="Canvas" PaintSurface="OnPaintSurface" IsHitTestVisible="True" IgnorePixelScaling="True"
+                       MouseRightButtonUp="Canvas_MouseRightButtonUp"/>
     </DockPanel>
 </Window>

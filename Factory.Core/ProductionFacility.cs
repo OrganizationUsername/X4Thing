@@ -165,15 +165,7 @@ public class ResourceStorage
     private readonly Dictionary<Resource, int> _resources = new();
     private readonly Dictionary<Resource, int> _incoming = new();
 
-    public List<string> GetInventory()
-    {
-        var inventory = new List<string>();
-        foreach (var (resource, amount) in _resources)
-        {
-            inventory.Add($"{resource.DisplayName}: {amount}");
-        }
-        return inventory;
-    }
+    public Dictionary<Resource, int> GetInventory() => _resources; //ToDo: This should be a copy instead of the real thing
 
     public Dictionary<Resource, int> GetAll() => new(_resources);
 

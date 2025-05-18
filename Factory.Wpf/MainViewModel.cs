@@ -14,6 +14,8 @@ public partial class MainViewModel : ObservableObject
 
     [ObservableProperty] private Entity? _hoveredEntity;
     [ObservableProperty] private bool _isAutoTicking;
+    [ObservableProperty] private bool _showAllProduction;
+    [ObservableProperty] private bool _showInventory;
 
     private readonly GameData _gameData;
     private readonly Ticker _ticker;
@@ -35,6 +37,8 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private int _tickStep = 25;
 
     partial void OnIsAutoTickingChanged(bool value) { if (value) { _dispatcherTimer.Start(); } else { _dispatcherTimer.Stop(); } }
+    partial void OnShowAllProductionChanged(bool value) => RequestRedraw?.Invoke();
+    partial void OnShowInventoryChanged(bool value) => RequestRedraw?.Invoke();
 
     public ObservableCollection<Entity> Entities { get; set; } = [];
 
@@ -101,7 +105,7 @@ public partial class MainViewModel : ObservableObject
             entity.Y = matching.Position.Y;
 
             var inventoryLines = matching.GetStorage().GetInventory();
-            entity.Inventory = string.Join(", ", inventoryLines);
+            entity.Inventory = string.Join(", ", inventoryLines.Where(l => l.Value > 0).Select(l => $"({l.Value}){l.Key.DisplayName}"));
 
             entity.ProductionProgresses.Clear();
 
