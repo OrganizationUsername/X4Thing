@@ -51,6 +51,24 @@ public class GameData : IUpdatable
     {
         AssignTransportersToBestTrades(currentTick);
         //Should try to assign fighters here
+        AssignFightersToTargets(currentTick);
+    }
+
+    private void AssignFightersToTargets(int currentTick)
+    {
+        foreach (var fighter in Fighters.Where(f => f.Target == null))
+        {
+            var bestTarget = Transporters
+                .Where(t => t.TotalHull > 0)
+                .Where(t => t.PlayerId != fighter.PlayerId)
+                .OrderByDescending(t => fighter.GetTransportValue(t))
+                .FirstOrDefault(t => fighter.GetTransportValue(t) >= fighter.MinimumValue);
+
+            if (bestTarget != null)
+            {
+                fighter.SetTarget(bestTarget, currentTick);
+            }
+        }
     }
 
     public void AssignTransportersToBestTrades(int currentTick)

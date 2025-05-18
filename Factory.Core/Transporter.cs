@@ -62,7 +62,7 @@ public class Fighter : IUpdatable, IHasName
         LogLines.Add(new FighterTargetAssignedLog(currentTick, Id, target.Id, target.Position));
     }
 
-    private float GetTransportValue(Transporter t) => t.Carrying.Sum(r => r.Amount * r.Resource.BaseValue);
+    public float GetTransportValue(Transporter t) => t.Carrying.Sum(r => r.Amount * r.Resource.BaseValue);
 
     private void Attack(Transporter transporter, int tick)
     {

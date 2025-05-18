@@ -53,13 +53,13 @@ public class TransporterDamagedLog(int tick, int transporterId, float damage, Ve
 }
 
 //LogLines.Add(new FighterTargetAssignedLog(currentTick, Id, target.Id, target.Position));
-public class FighterTargetAssignedLog(int tick, int transporterId, int targetId, Vector2 targetPosition) : ILogLine, IFighterLog
+public class FighterTargetAssignedLog(int tick, int fighterId, int targetId, Vector2 targetPosition) : ILogLine, IFighterLog
 {
     public int Tick { get; } = tick;
-    public int TransporterId { get; } = transporterId;
+    public int FighterId { get; } = fighterId;
     public int TargetId { get; } = targetId;
     public Vector2 TargetPosition { get; } = targetPosition;
-    public string Format() => $"[Tick {Tick:D4}] Fighter {TransporterId} assigned to target {TargetId} at {TargetPosition}";
+    public string Format() => $"[Tick {Tick:D4}] Fighter {FighterId} assigned to target {TargetId} at {TargetPosition}";
 }
 
 
