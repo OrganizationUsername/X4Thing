@@ -74,11 +74,11 @@ public partial class MainViewModel : ObservableObject
 
         foreach (var t in _gameData.Transporters)
         {
-            Entities.Add(new TransporterEntity { X = t.Position.X, Y = t.Position.Y, IsStation = false, Name = t.Name, });
+            Entities.Add(new TransporterEntity { X = t.Position.X, Y = t.Position.Y, IsStation = false, Name = t.Name, HullRemaining = t.TotalHull, });
         }
         foreach (var f in _gameData.Fighters)
         {
-            Entities.Add(new FighterEntity { X = f.Position.X, Y = f.Position.Y, IsStation = false, Name = f.Name, });
+            Entities.Add(new FighterEntity { X = f.Position.X, Y = f.Position.Y, IsStation = false, Name = f.Name, HullRemaining = f.TotalHull, });
         }
     }
 

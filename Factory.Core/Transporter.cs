@@ -5,7 +5,12 @@ namespace Factory.Core;
 //ToDo: Make it so the logs from the production facilities and transporters are stored in a sortable way so I can sort them by tick and see what happened at a certain time.
 //ToDo: Make it so when transporters take or drop off product that they only take as much as they can hold.
 
-public class Fighter : IUpdatable, IHasName
+public class Ship
+{
+    public double TotalHull { get; set; } = 100;
+}
+
+public class Fighter : Ship, IUpdatable, IHasName
 {
     //it looks like we should have another class of `IFlyable`
     public int Id { get; set; }
@@ -74,7 +79,7 @@ public class Fighter : IUpdatable, IHasName
     }
 }
 
-public class Transporter : IUpdatable, IHasName
+public class Transporter : Ship, IUpdatable, IHasName
 {
     public Vector2 Position { get; set; }
     public float SpeedPerTick { get; set; } = 1f;
@@ -82,7 +87,6 @@ public class Transporter : IUpdatable, IHasName
     public int Id { get; set; } = 0;
     public string Name { get; set; } = "Transporter";
     public float MaxVolume { get; set; } = 10f;
-    public float TotalHull { get; set; } = 100f;
     public List<ILogLine> LogLines { get; } = [];
 
     public List<ResourceAmount> Carrying { get; } = [];

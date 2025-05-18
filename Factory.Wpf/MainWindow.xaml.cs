@@ -105,10 +105,12 @@ public partial class MainWindow
     private readonly SKFont _font = new() { Size = 14, };
     private SKPaint _textPaint = new() { Color = SKColors.Black, IsAntialias = true, };
     private readonly SKPaint _stationFill = new() { IsAntialias = true, Style = SKPaintStyle.Fill, Color = SKColors.SteelBlue, };
-    private readonly SKPaint _shipFill = new() { IsAntialias = true, Style = SKPaintStyle.Fill, Color = SKColors.OrangeRed, };
+    private readonly SKPaint _shipFill = new() { IsAntialias = true, Style = SKPaintStyle.Fill, Color = SKColors.DarkBlue, };
+    private readonly SKPaint _fighterFill = new() { IsAntialias = true, Style = SKPaintStyle.Fill, Color = SKColors.Orange, };
+
     private readonly SKPaint _border = new() { IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = 2, Color = SKColors.Black, };
     private readonly SKPaint _highlightPaint = new() { IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = 4, Color = SKColors.Magenta, };
-    //need gray for _deadShipFill
+
     private readonly SKPaint _deadShipFill = new() { IsAntialias = true, Style = SKPaintStyle.Fill, Color = SKColors.Gray, };
     private void OnPaintSurface(object sender, SKPaintSurfaceEventArgs e)
     {
@@ -134,7 +136,7 @@ public partial class MainWindow
         {
             var x = entity.X;
             var y = entity.Y;
-            canvas.DrawCircle(x, y, 15, _shipFill);
+            canvas.DrawCircle(x, y, 15, entity.HullRemaining > 0 ? _fighterFill : _deadShipFill);
             if (entity.IsSelected) { canvas.DrawCircle(x, y, 15, _highlightPaint); }
             canvas.DrawCircle(x, y, 15, _border);
             canvas.DrawText(entity.Name, x + 20, y + 5, SKTextAlign.Left, _font, _textPaint);
