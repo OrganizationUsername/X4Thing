@@ -13,4 +13,8 @@
     <PackageReference Include="SkiaSharp.Views.WPF" Version="3.119.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Factory.Core\Factory.Core.csproj" />
+  </ItemGroup>
+
 </Project>

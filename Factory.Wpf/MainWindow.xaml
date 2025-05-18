@@ -10,6 +10,6 @@
         d:DataContext="{wpf1:MainViewModel}">
     <DockPanel>
         <Button DockPanel.Dock="Right" Content="Tick" Width="80" Margin="10" Command="{Binding TickCommand}" />
-        <wpf:SKElement PaintSurface="OnPaintSurface" />
+        <wpf:SKElement x:Name="canvas" PaintSurface="OnPaintSurface" />
     </DockPanel>
 </Window>
