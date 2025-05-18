@@ -7,9 +7,16 @@
         xmlns:wpf1="clr-namespace:Factory.Wpf"
         mc:Ignorable="d"
         Title="MainWindow" Height="450" Width="800"
-        d:DataContext="{wpf1:MainViewModel}">
+        d:DataContext="{d:DesignInstance Type=wpf1:MainViewModel}">
     <DockPanel>
-        <Button DockPanel.Dock="Right" Content="Tick" Width="80" Margin="10" Command="{Binding TickCommand}" />
-        <wpf:SKElement x:Name="Canvas" PaintSurface="OnPaintSurface" IsHitTestVisible="True" />
+        <StackPanel DockPanel.Dock="Right">
+            <Button Content="Reset" Width="80" Margin="10" Command="{Binding ResetViewCommand}" />
+            <GroupBox Header="TickCount">
+                <TextBox Text="{Binding TickCount }" />
+            </GroupBox>
+            <Button Content="Tick" Width="80" Margin="10" Command="{Binding TickCommand}" />
+        </StackPanel>
+
+        <wpf:SKElement x:Name="Canvas" PaintSurface="OnPaintSurface" IsHitTestVisible="True" IgnorePixelScaling="True" />
     </DockPanel>
 </Window>
