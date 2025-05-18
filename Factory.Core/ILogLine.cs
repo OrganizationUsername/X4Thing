@@ -62,6 +62,15 @@ public class FighterTargetAssignedLog(int tick, int fighterId, int targetId, Vec
     public string Format() => $"[Tick {Tick:D4}] Fighter {FighterId} assigned to target {TargetId} at {TargetPosition}";
 }
 
+//LogLines.Add(new FighterTargetLostLog(tick, Id, Target.Id, Target.Position));
+public class FighterTargetLostLog(int tick, int fighterId, int targetId, Vector2 targetPosition) : ILogLine, IFighterLog
+{
+    public int Tick { get; } = tick;
+    public int FighterId { get; } = fighterId;
+    public int TargetId { get; } = targetId;
+    public Vector2 TargetPosition { get; } = targetPosition;
+    public string Format() => $"[Tick {Tick:D4}] Fighter {FighterId} lost target {TargetId} at {TargetPosition}";
+}
 
 public class EntityAttackedLog(int tick, int transporterId, float damage, Vector2 position, string? name) : ILogLine, IFighterLog
 {

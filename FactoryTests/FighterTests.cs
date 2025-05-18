@@ -203,4 +203,89 @@ public class FighterTests
     }
 
 
+    [Fact]
+    public void Fighter_StopsChasing_WhenTransporter_NoLongerValuable()
+    {
+        var gameData = GameData.GetDefault();
+        var aiModule = gameData.GetResource("ai_module"); // Assume high value, e.g., 50
+
+        var sourceStorage = new ResourceStorage();
+        sourceStorage.Add(aiModule, 10); // Total value = 500
+        var source = new ProductionFacility(sourceStorage, []) { Name = "Source", Position = new Vector2(0, 0), };
+
+        var dest = new ProductionFacility(new ResourceStorage(), []) { Name = "Dest", Position = new Vector2(50, 0), };
+
+        var transporter = new Transporter
+        {
+            Id = 1,
+            Name = "Freighter",
+            Position = new Vector2(0, 0),
+            SpeedPerTick = 10f,
+            MaxVolume = 100f,
+            PlayerId = 2,
+        };
+
+        transporter.AssignTask(source, dest, [new ResourceAmount(aiModule, 10),]); // Should be carried in one go
+
+        var fighter = new Fighter
+        {
+            Id = 99,
+            Name = "Raider",
+            Position = new Vector2(1000, 0), // Very far away
+            SpeedPerTick = 10f,
+            AttackRange = 5f,
+            AttackDamage = 10f,
+            MinimumValue = 200f, // Will initially qualify
+            PlayerId = 1,
+        };
+
+        gameData.Facilities.Add(source);
+        gameData.Facilities.Add(dest);
+        gameData.Transporters.Add(transporter);
+        gameData.Fighters.Add(fighter);
+
+        var ticker = new Ticker { GameData = gameData, };
+        ticker.Register(source);
+        ticker.Register(dest);
+        ticker.Register(transporter);
+        ticker.Register(fighter);
+
+        // Tick 0 assigns the fighter
+        gameData.Tick(0);
+
+        // Simulate 5 ticks to allow delivery to happen
+        ticker.RunTicks(5);
+
+        // Now transporter should be empty, fighter should not continue attacking
+        gameData.Tick(ticker.CurrentTick);
+
+        // Advance several ticks to check if fighter keeps chasing
+        ticker.RunTicks(50);
+
+        var logs = gameData.GetAllLogs();
+        var assigned = logs.OfType<FighterTargetAssignedLog>().FirstOrDefault();
+        var damaged = logs.OfType<TransporterDamagedLog>().ToList();
+        var destroyed = logs.OfType<TransporterDestroyedLog>().ToList();
+
+        var transporterIsEmpty = transporter.Carrying.Count == 0;
+        var fighterStillFar = Vector2.Distance(fighter.Position, transporter.Position) > 10;
+        var lostInterest = logs.OfType<FighterTargetLostLog>().Any(l => l.FighterId == fighter.Id && l.TargetId == transporter.Id);
+
+        //var debugLog = gameData.GetAllLogsFormatted();
+        /*
+           [Tick 0000] Transporter 1 assigned to deliver 10 x ai_module from Source(<0, 0>) to Dest(<50, 0>)
+           [Tick 0001] Transporter 1 picked up: 10 x ai_module from Source
+           [Tick 0001] Fighter 99 assigned to target 1 at <0, 0>
+           [Tick 0006] Received 10 of ai_module from Freighter at <50, 0>
+           [Tick 0006] Transporter 1 delivered to <50, 0>: 10 x ai_module
+           [Tick 0006] Fighter 99 lost target 1 at <50, 0>
+        */
+
+        Assert.NotNull(assigned);
+        Assert.True(transporterIsEmpty, "Transporter should have delivered everything.");
+        Assert.True(fighterStillFar, "Fighter should not have reached transporter.");
+        Assert.True(lostInterest, "Fighter should have lost interest in transporter.");
+        Assert.Empty(damaged);
+        Assert.Empty(destroyed);
+    }
 }

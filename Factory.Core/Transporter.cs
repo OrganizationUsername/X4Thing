@@ -25,6 +25,10 @@ public class Fighter : IUpdatable, IHasName
 
         if (!IsValidTarget(Target))
         {
+            if (Target is not null)
+            {
+                LogLines.Add(new FighterTargetLostLog(tick, Id, Target.Id, Target.Position));
+            }
             Target = null;
         }
 

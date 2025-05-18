@@ -953,4 +953,7 @@ public class TransporterTests
         Assert.Equal(01, destStorage.GetIncomingAmount(ore));
         Assert.Equal(34, destStorage.GetTotalIncludingIncoming(ore));
     }
+
+
+
 }
