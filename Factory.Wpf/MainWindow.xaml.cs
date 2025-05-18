@@ -3,8 +3,10 @@ using CommunityToolkit.Mvvm.Input;
 using FactoryCli;
 using SkiaSharp;
 using SkiaSharp.Views.Desktop;
+using SkiaSharp.Views.WPF;
 using System.Collections.ObjectModel;
 using System.Numerics;
+using System.Windows.Input;
 
 namespace Factory.Wpf;
 
@@ -12,25 +14,86 @@ public partial class MainWindow
 {
     private readonly MainViewModel _viewModel;
 
+    private float _zoom = 1f;
+    private SKPoint _pan = new(0, 0);
+    private SKPoint _lastDrag;
+    private bool _isDragging;
+
     public MainWindow(MainViewModel vm)
     {
         InitializeComponent();
         DataContext = vm;
         _viewModel = vm;
 
-        _viewModel.RequestRedraw += () => { canvas.InvalidateVisual(); };
+        _viewModel.RequestRedraw += () => Canvas.InvalidateVisual();
+        _viewModel.ResetCanvasView += ResetView;
+
+        Canvas.MouseWheel += Canvas_MouseWheel;
+        Canvas.MouseDown += Canvas_MouseDown;
+        Canvas.MouseMove += Canvas_MouseMove;
+        Canvas.MouseUp += Canvas_MouseUp;
+
+        Loaded += (_, _) => Canvas.Focus(); // 👈 Force focus on startup
     }
 
+    private void ResetView()
+    {
+        _zoom = 1f;
+        _pan = new SKPoint(0, 0);
+        Canvas.InvalidateVisual();
+    }
+
+    private void Canvas_MouseDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.LeftButton != MouseButtonState.Pressed) { return; }
+
+        _lastDrag = e.GetPosition(Canvas).ToSKPoint();
+        _isDragging = true;
+    }
+
+    private void Canvas_MouseMove(object sender, MouseEventArgs e)
+    {
+        if (!_isDragging) { return; }
+
+        var current = e.GetPosition(Canvas).ToSKPoint();
+        var delta = current - _lastDrag;
+        _pan += delta;
+        _lastDrag = current;
+
+        Canvas.InvalidateVisual();
+    }
+
+    private void Canvas_MouseUp(object sender, MouseButtonEventArgs e)
+    {
+        _isDragging = false;
+    }
+
+    private void Canvas_MouseWheel(object sender, MouseWheelEventArgs e)
+    {
+        var delta = e.Delta > 0 ? 1.1f : 0.9f;
+        _zoom *= delta;
+
+        var pos = e.GetPosition(Canvas);
+        var mouse = new SKPoint((float)pos.X, (float)pos.Y);
+
+        _pan = new SKPoint(mouse.X - (mouse.X - _pan.X) * delta, mouse.Y - (mouse.Y - _pan.Y) * delta);
+
+        Canvas.InvalidateVisual();
+    }
+
+    SKFont font = new SKFont { Size = 14, };
+    SKPaint textPaint = new SKPaint { Color = SKColors.Black, TextSize = 14, IsAntialias = true, }; //'SKPaint.TextSize' is obsolete: 'Use SKFont.Size instead.'
     private void OnPaintSurface(object sender, SKPaintSurfaceEventArgs e)
     {
         var canvas = e.Surface.Canvas;
         canvas.Clear(SKColors.White);
+        canvas.Translate(_pan.X, _pan.Y);
+        canvas.Scale(_zoom);
 
         foreach (var entity in _viewModel.Entities)
         {
-            using var fill = new SKPaint { IsAntialias = true, Style = SKPaintStyle.Fill, Color = entity.IsStation ? SKColors.SteelBlue : SKColors.OrangeRed, };
-
-            using var border = new SKPaint { IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = 2, Color = SKColors.Black, };
+            var fill = new SKPaint { IsAntialias = true, Style = SKPaintStyle.Fill, Color = entity.IsStation ? SKColors.SteelBlue : SKColors.OrangeRed, };
+            var border = new SKPaint { IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = 2, Color = SKColors.Black, };
 
             if (entity.IsStation)
             {
@@ -42,10 +105,7 @@ public partial class MainWindow
                 canvas.DrawCircle(entity.X, entity.Y, 15, fill);
                 canvas.DrawCircle(entity.X, entity.Y, 15, border);
             }
-
-            using var textPaint = new SKPaint { Color = SKColors.Black, TextSize = 14, IsAntialias = true, };
-
-            canvas.DrawText(entity.IsStation ? "Station" : "Ship", entity.X + 20, entity.Y + 5, textPaint);
+            canvas.DrawText(entity.IsStation ? "Station" : "Ship", entity.X + 20, entity.Y + 5, SKTextAlign.Left, font, textPaint);
         }
     }
 }
@@ -60,6 +120,7 @@ public partial class Entity : ObservableObject
 public partial class MainViewModel : ObservableObject
 {
     public event Action? RequestRedraw;
+    public event Action? ResetCanvasView;
 
     private readonly GameData _gameData;
     private readonly Ticker _ticker;
@@ -113,6 +174,12 @@ public partial class MainViewModel : ObservableObject
         {
             Entities.Add(new Entity { X = t.Position.X * Scale, Y = t.Position.Y * Scale, IsStation = false, });
         }
+    }
+
+    [RelayCommand]
+    private void ResetView()
+    {
+        ResetCanvasView?.Invoke();
     }
 
 
