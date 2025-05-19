@@ -1,4 +1,5 @@
-﻿using System.Numerics;
+﻿using System.Diagnostics;
+using System.Numerics;
 
 namespace Factory.Core;
 
@@ -63,40 +64,27 @@ public class GameData(Dictionary<string, Resource> resources, Dictionary<string,
             var trade = FindBestTrade();
             if (trade is null) continue;
 
-            var (from, to, resource, amount) = trade.Value;
-            var resourceVolume = resource.Volume;
+            var resourceVolume = trade.Resource.Volume;
             var maxAmount = (int)(transporter.MaxVolume / resourceVolume);
             if (maxAmount <= 0) continue;
 
-            var toSend = Math.Min(amount, maxAmount);
-            transporter.AssignTask(from, to, [new ResourceAmount(resource, toSend),], currentTick);
+            var toSend = Math.Min(trade.Amount, maxAmount);
+            transporter.AssignTask(trade.From, trade.To, [new ResourceAmount(trade.Resource, toSend),], currentTick);
         }
     }
 
-    public (ProductionFacility from, ProductionFacility to, Resource resource, int amount)? FindBestTrade() //ToDo: Update this to real object instead of tuple
-    {
-        var pulls = GetPullRequests().ToList();
-        var pushes = GetPushOffers().ToList();
-
-        var best = pulls
+    public TradeMission? FindBestTrade() =>
+        GetPullRequests()
             .SelectMany(pull =>
-                pushes
+                GetPushOffers()
                     .Where(push => push.resource == pull.resource)
                     .Where(push => push.facility != pull.facility)
                     .Where(push => push.playerId == pull.playerId)
-                    .Select(push => new
-                    {
-                        From = push.facility,
-                        To = pull.facility,
-                        Resource = pull.resource,
-                        Amount = Math.Min(push.amount, pull.amount),
-                        Value = pull.resource.BaseValue / Vector2.Distance(push.facility.Position, pull.facility.Position),
-                    }))
+            //ToDo: Later this can be a bit more advanced where we get the sum of pull and see if a push can do it all
+                    .Select(push => new TradeMission(push.facility, pull.facility, pull.resource, Math.Min(push.amount, pull.amount))))
             .OrderByDescending(x => x.Value)
+            //ToDo: Why aren't we returning all of the results and letting them pick?
             .FirstOrDefault();
-
-        return best is null ? null : (best.From, best.To, best.Resource, best.Amount);
-    }
 
     private static Dictionary<string, Recipe> CreateRecipesDictionary(Dictionary<string, Resource> resources)
     {
@@ -164,4 +152,13 @@ public class GameData(Dictionary<string, Resource> resources, Dictionary<string,
 
     public Resource GetResource(string id) => Resources[id];
     public Recipe GetRecipe(string id) => Recipes[id];
+}
+
+public class TradeMission(ProductionFacility from, ProductionFacility to, Resource resource, int amount)
+{
+    public ProductionFacility From { get; } = from;
+    public ProductionFacility To { get; } = to;
+    public Resource Resource { get; } = resource;
+    public int Amount { get; } = amount;
+    public float Value { get; } = resource.BaseValue / Vector2.Distance(from.Position, to.Position);
 }

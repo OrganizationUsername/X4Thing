@@ -25,8 +25,6 @@ public class TransporterTests
         ticker.Register(source);
         ticker.Register(dest);
         ticker.Register(transporter);
-
-        // Tick once to trigger pickup
         ticker.RunTicks(1);
 
         gameData.Facilities.Add(source);
@@ -491,9 +489,6 @@ public class TransporterTests
         var post = destStorage.GetAmount(computerPart);
         Assert.True(post > pre, $"Expected more computer_parts. Before: {pre}, After: {post}");
 
-        // Pull logs and assert order
-        int GetTick<T>(Func<T, bool> predicate) where T : class, ILogLine => logs.OfType<T>().First(predicate).Tick;
-
         var t1 = GetTick<ProductionCompletedLog>(l => l.ResourceId == "metal_bar" && l.Facility.Position == source.Position);
         var t2 = GetTick<TransportAssignedLog>(l => l.ResourceId == "metal_bar" && l.From == source && l.To == dest);
         var t3 = GetTick<PickupLog>(l => l.PickedUp.Any(p => p.Resource == metalBar) && l.TransporterId == transporter.Id);
@@ -512,6 +507,10 @@ public class TransporterTests
         // Final state check
         Assert.Empty(transporter.Carrying);
         Assert.True(destStorage.GetAmount(computerPart) > 0, "Expected at least one computer_part produced.");
+        return;
+
+        // Pull logs and assert order
+        int GetTick<T>(Func<T, bool> predicate) where T : class, ILogLine => logs.OfType<T>().First(predicate).Tick;
     }
 
     [Fact]
@@ -594,10 +593,6 @@ public class TransporterTests
         Assert.Contains(logs, l => l is ProductionStartedLog { ResourceId: "computer_part", });
         Assert.Contains(logs, l => l is ProductionCompletedLog { ResourceId: "computer_part", });
 
-        // --- Ordered Tick Extraction
-        int TickOf<T>(Func<T, bool> filter) where T : class, ILogLine =>
-            logs.OfType<T>().First(filter).Tick;
-
         var tProductionStart = TickOf<ProductionStartedLog>(l => l.ResourceId == "metal_bar");
         var tProductionComplete = TickOf<ProductionCompletedLog>(l => l.ResourceId == "metal_bar");
         var tTransportAssigned = TickOf<TransportAssignedLog>(l => l.ResourceId == "metal_bar");
@@ -619,6 +614,10 @@ public class TransporterTests
         // --- Sanity check (optional)
         var allFormatted = string.Join(Environment.NewLine, logs.Select(l => l.Format()));
         Assert.Contains("computer_part", allFormatted);
+        return;
+
+        // --- Ordered Tick Extraction
+        int TickOf<T>(Func<T, bool> filter) where T : class, ILogLine => logs.OfType<T>().First(filter).Tick;
     }
 
     [Fact]

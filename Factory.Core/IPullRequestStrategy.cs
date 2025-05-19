@@ -26,7 +26,7 @@ public class SustainedProductionStrategy(int ticks) : IPullRequestStrategy
     {
         foreach (var (recipe, count) in facility.GetWorkshops())
         {
-            var jobsNeeded = (ticks * count) / recipe.Duration;
+            var jobsNeeded = ticks * count / recipe.Duration;
 
             foreach (var (resource, perJob) in recipe.Inputs)
             {

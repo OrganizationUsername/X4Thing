@@ -68,10 +68,7 @@ public class Transporter : Ship, IUpdatable
 
                 LogLines.Add(new PickupLog(tick, Id, [new ResourceAmount(item.Resource, amountToTake),], CurrentTask?.Source));
             }
-            else
-            {
-                LogLines.Add(new TransportAssignedLog(tick, Id, item.Resource.Id, item.Amount, task.Source, task.Destination));
-            }
+            else { LogLines.Add(new TransportAssignedLog(tick, Id, item.Resource.Id, item.Amount, task.Source, task.Destination)); }
         }
         task.HasPickedUp = true;
         _target = task.Destination.Position;
@@ -100,13 +97,10 @@ public class Transporter : Ship, IUpdatable
             failed.Add(new ResourceAmount(taskItem.Resource, shortfall));
         }
 
-        if (actualDelivered.Count == 0 && failed.Count > 0) // Decide which failure log to write, if any
+        switch (actualDelivered.Count) // Decide which failure log to write, if any
         {
-            LogLines.Add(new DeliveryFailedLog(tick, Id, failed, task.Destination)); // Entire delivery failed — none of the cargo was delivered
-        }
-        else if (actualDelivered.Count > 0 && failed.Count > 0)
-        {
-            LogLines.Add(new DeliveryPartialLog(tick, Id, failed, task.Destination)); // Partial delivery — some of the items were delivered, some were not
+            case 0 when failed.Count > 0: LogLines.Add(new DeliveryFailedLog(tick, Id, failed, task.Destination)); break; // Entire delivery failed — none of the cargo was delivered
+            case > 0 when failed.Count > 0: LogLines.Add(new DeliveryPartialLog(tick, Id, failed, task.Destination)); break; // Partial delivery — some of the items were delivered, some were not
         }
 
         Carrying.RemoveAll(item => item.Amount == 0); // Clean up inventory — remove any resource entries with 0 quantity left

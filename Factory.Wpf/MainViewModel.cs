@@ -185,10 +185,7 @@ public partial class TransporterEntity : Ship
     [ObservableProperty] private string _destination = string.Empty;
 }
 
-public partial class FighterEntity : Ship
-{
-
-}
+public partial class FighterEntity : Ship;
 
 public partial class FacilityEntity : Entity
 {

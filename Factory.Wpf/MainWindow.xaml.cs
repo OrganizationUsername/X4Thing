@@ -88,16 +88,15 @@ public partial class MainWindow
             return entity is FacilityEntity ? Math.Abs(dx) <= 15 && Math.Abs(dy) <= 15 : Math.Sqrt(dx * dx + dy * dy) <= 15;
         });
 
-        if (hovered != _viewModel.HoveredEntity)
-        {
-            _viewModel.HoveredEntity = hovered;
-            Canvas.InvalidateVisual();
-        }
+        if (hovered == _viewModel.HoveredEntity) { return; }
+
+        _viewModel.HoveredEntity = hovered;
+        Canvas.InvalidateVisual();
 
     }
     private void Canvas_MouseWheel(object sender, MouseWheelEventArgs e)
     {
-        var scaledFont = new SKFont { Size = 14 * _zoom, }; //Should get this working at some point
+        //var scaledFont = new SKFont { Size = 14 * _zoom, }; //Should get this working at some point
         _textPaint = new SKPaint { Color = SKColors.Black, IsAntialias = true, };
         var delta = e.Delta > 0 ? 1.1f : 0.9f; _zoom *= delta; var pos = e.GetPosition(Canvas); var mouse = new SKPoint((float)pos.X, (float)pos.Y); _pan = new SKPoint(mouse.X - (mouse.X - _pan.X) * delta, mouse.Y - (mouse.Y - _pan.Y) * delta); Canvas.InvalidateVisual();
     }
@@ -180,7 +179,7 @@ public partial class MainWindow
 
             if (!_viewModel.ShowAllProduction && _viewModel.HoveredEntity != entity) { continue; }
 
-            var spacing = 20f;
+            const float spacing = 20f;
 
             foreach (var progress in entity.ProductionProgresses)
             {
@@ -189,8 +188,8 @@ public partial class MainWindow
                 var textX = x + 20;
                 var barX = textX + textBounds.Width + 5;
                 var barY = y + textYOffset;
-                var barHeight = 5f;
-                var barWidth = 50f;
+                const float barHeight = 5f;
+                const float barWidth = 50f;
 
                 var fillPercent = Math.Clamp(progress.Tick / (float)progress.Duration, 0f, 1f);
                 var fillRect = new SKRect(barX, barY, barX + fillPercent * barWidth, barY + barHeight);
