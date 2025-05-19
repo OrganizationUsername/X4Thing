@@ -2,8 +2,16 @@
 
 namespace Factory.Core;
 
-//ToDo: Make it so the logs from the production facilities and transporters are stored in a sortable way so I can sort them by tick and see what happened at a certain time.
-//ToDo: Make it so when transporters take or drop off product that they only take as much as they can hold.
+//ToDo: The next thing is to make Energy cells create from nothing.
+//ToDo: Another thing is to make asteroid mining.
+//ToDo: Making it so ships can be produced would be great
+//ToDo: A proof of concept for creating a ship and having a protectingShip/escort would be awesome.
+//ToDo: Draw transports/fighters differently in the WPF.
+//ToDo: Animate the fighter shooting a laser at the target if it's attacking.
+//ToDo: Set up more factions, including neutral that sells something important. Have us on left, neutral in the middle, and enemies on the right.
+//ToDo: Have contracts presented that the user can accept. If they do, sell to get money.
+//ToDo: Actually, I don't use money in a meaningful way right now. I guess that makes sense since I'm only doing trade with my own faction. Later on, I want to make sure that I can trade with other factions if it benefits me.
+//ToDo: Probably want to rework the recipes/values since they're not really balanced.
 
 public class Transporter : Ship, IUpdatable
 {
