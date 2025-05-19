@@ -111,7 +111,7 @@ public class TransporterTests
         Assert.Contains(logs, l => l is DeliveryLog dl && dl.Delivered.Any(r => r.Resource == metalBar && r.Amount == 2));
         Assert.Contains(logs, l => l is TransportReceivedLog { ResourceId: "metal_bar", } rl && rl.Position == dest.Position);
         Assert.Contains(logs, l => l is ProductionStartedLog { ResourceId: "computer_part", } sl && sl.Position == dest.Position);
-        Assert.Contains(logs, l => l is ProductionCompletedLog { ResourceId: "computer_part", } cl && cl.Position == dest.Position);
+        Assert.Contains(logs, l => l is ProductionCompletedLog { ResourceId: "computer_part", } cl && cl.Facility.Position == dest.Position);
 
         // ✅ Final state checks
         Assert.Empty(transporter.Carrying);
@@ -478,13 +478,13 @@ public class TransporterTests
         var logs = gameData.GetAllLogs();
 
         // Log-based assertions
-        Assert.Contains(logs, l => l is ProductionCompletedLog { ResourceId: "metal_bar", } pl && pl.Position == source.Position);
+        Assert.Contains(logs, l => l is ProductionCompletedLog { ResourceId: "metal_bar", } pl && pl.Facility.Position == source.Position);
         Assert.Contains(logs, l => l is TransportAssignedLog { ResourceId: "metal_bar", } al && al.From.Position == source.Position && al.To.Position == dest.Position);
         Assert.Contains(logs, l => l is PickupLog pl && pl.PickedUp.Any(p => p.Resource == metalBar) && pl.TransporterId == transporter.Id);
         Assert.Contains(logs, l => l is DeliveryLog dl && dl.Delivered.Any(d => d.Resource == metalBar) && dl.Destination == dest.Position);
         Assert.Contains(logs, l => l is TransportReceivedLog { ResourceId: "metal_bar", } rl && rl.Position == dest.Position);
         Assert.Contains(logs, l => l is ProductionStartedLog { ResourceId: "computer_part", } sl && sl.Position == dest.Position);
-        Assert.Contains(logs, l => l is ProductionCompletedLog { ResourceId: "computer_part", } cl && cl.Position == dest.Position);
+        Assert.Contains(logs, l => l is ProductionCompletedLog { ResourceId: "computer_part", } cl && cl.Facility.Position == dest.Position);
         Assert.Empty(transporter.Carrying);
 
         const int pre = 0;
@@ -494,13 +494,13 @@ public class TransporterTests
         // Pull logs and assert order
         int GetTick<T>(Func<T, bool> predicate) where T : class, ILogLine => logs.OfType<T>().First(predicate).Tick;
 
-        var t1 = GetTick<ProductionCompletedLog>(l => l.ResourceId == "metal_bar" && l.Position == source.Position);
+        var t1 = GetTick<ProductionCompletedLog>(l => l.ResourceId == "metal_bar" && l.Facility.Position == source.Position);
         var t2 = GetTick<TransportAssignedLog>(l => l.ResourceId == "metal_bar" && l.From == source && l.To == dest);
         var t3 = GetTick<PickupLog>(l => l.PickedUp.Any(p => p.Resource == metalBar) && l.TransporterId == transporter.Id);
         var t4 = GetTick<DeliveryLog>(l => l.Delivered.Any(p => p.Resource == metalBar) && l.Destination == dest.Position);
         var t5 = GetTick<TransportReceivedLog>(l => l.ResourceId == "metal_bar" && l.Position == dest.Position);
         var t6 = GetTick<ProductionStartedLog>(l => l.ResourceId == "computer_part" && l.Position == dest.Position);
-        var t7 = GetTick<ProductionCompletedLog>(l => l.ResourceId == "computer_part" && l.Position == dest.Position);
+        var t7 = GetTick<ProductionCompletedLog>(l => l.ResourceId == "computer_part" && l.Facility.Position == dest.Position);
 
         Assert.True(t1 <= t2, "Production completed before transport assignment");
         Assert.True(t2 <= t3, "Transport assigned before pickup");

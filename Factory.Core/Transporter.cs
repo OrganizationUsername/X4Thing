@@ -15,8 +15,7 @@ public class Transporter : Ship, IUpdatable, IHasName
 
     public void AssignTask(ProductionFacility from, ProductionFacility to, List<ResourceAmount> cargo, int? currentTick = null)
     {
-        var task = new TransportTask(from, to, cargo);
-        //on the `to` side, we should say how many items are on the way
+        var task = new TransportTask(from, to, cargo); //on the `to` side, we should say how many items are on the way
         to.SayWhatsOnTheWay(cargo);
         _taskQueue.Enqueue(task);
         LogLines.Add(new TransportAssignedLog(currentTick ?? 0, Id, cargo.First().Resource.Id, cargo.Sum(x => x.Amount), from, to));
@@ -120,6 +119,4 @@ public class ResourceAmount(Resource resource, int amount)
 {
     public Resource Resource { get; set; } = resource;
     public int Amount { get; set; } = amount;
-
-    public override string ToString() => $"{Amount} x {Resource.Id}";
 }

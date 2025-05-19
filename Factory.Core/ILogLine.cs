@@ -12,10 +12,9 @@ public interface IFighterLog;
 public interface ITransporterLog;
 public interface IProductionFacilityLog;
 
-public class TransportReceivedLog(int tick, int facilityId, string resourceId, int amount, Vector2 position, Transporter from) : ILogLine, ITransporterLog
+public class TransportReceivedLog(int tick, string resourceId, int amount, Vector2 position, Transporter from) : ILogLine, ITransporterLog
 {
     public int Tick { get; } = tick;
-    public int FacilityId { get; } = facilityId;
     public string ResourceId { get; } = resourceId;
     public int Amount { get; } = amount;
     public Vector2 Position { get; } = position;
@@ -23,7 +22,6 @@ public class TransportReceivedLog(int tick, int facilityId, string resourceId, i
     public string Format() => $"[Tick {Tick:D4}] Received {Amount} of {ResourceId} from {From.Name} at {Position}";
 }
 
-//LogLines.Add(new TransporterDestroyedLog(currentTick, Id, Position));
 public class TransporterDestroyedLog(int tick, int transporterId, Vector2 position) : ILogLine, ITransporterLog
 {
     public int Tick { get; } = tick;
@@ -31,7 +29,7 @@ public class TransporterDestroyedLog(int tick, int transporterId, Vector2 positi
     public Vector2 Position { get; } = position;
     public string Format() => $"[Tick {Tick:D4}] Transporter {TransporterId} destroyed at {Position}";
 }
-//LogLines.Add(new ShipLostCargoLog(currentTick, Id, item.Resource.Id, item.Amount));
+
 public class ShipLostCargoLog(int tick, int transporterId, string resourceId, int amount) : ILogLine, ITransporterLog
 {
     public int Tick { get; } = tick;
@@ -40,7 +38,6 @@ public class ShipLostCargoLog(int tick, int transporterId, string resourceId, in
     public int Amount { get; } = amount;
     public string Format() => $"[Tick {Tick:D4}] Transporter {TransporterId} lost cargo: {Amount} of {ResourceId}";
 }
-
 
 public class TransporterDamagedLog(int tick, int transporterId, float damage, Vector2 position, string? name) : ILogLine, ITransporterLog
 {
@@ -52,7 +49,6 @@ public class TransporterDamagedLog(int tick, int transporterId, float damage, Ve
     public string Format() => $"[Tick {Tick:D4}] Transporter {TransporterId} damaged ({Damage}) at {Position} by {Name ?? "Unknown"}";
 }
 
-//LogLines.Add(new FighterTargetAssignedLog(currentTick, Id, target.Id, target.Position));
 public class FighterTargetAssignedLog(int tick, int fighterId, int targetId, Vector2 targetPosition) : ILogLine, IFighterLog
 {
     public int Tick { get; } = tick;
@@ -61,33 +57,25 @@ public class FighterTargetAssignedLog(int tick, int fighterId, int targetId, Vec
     public Vector2 TargetPosition { get; } = targetPosition;
     public string Format() => $"[Tick {Tick:D4}] Fighter {FighterId} assigned to target {TargetId} at {TargetPosition}";
 }
-//LogLines.Add(new TransportSentLog(tick, Id, res.Id, amountToTake, Position, receiver));
-public class TransportSentLog(int tick, int facilityId, string resourceId, int amount, Vector2 position, Transporter to) : ILogLine, ITransporterLog
+
+public class TransportSentLog(int tick, string resourceId, int amount, Vector2 position, Transporter to) : ILogLine, ITransporterLog
 {
     public int Tick { get; } = tick;
-    public int FacilityId { get; } = facilityId;
     public string ResourceId { get; } = resourceId;
     public int Amount { get; } = amount;
     public Vector2 Position { get; } = position;
     public Transporter To { get; } = to;
     public string Format() => $"[Tick {Tick:D4}] Sent {Amount} of {ResourceId} to {To.Name} at {Position}";
 }
-//LogLines.Add(new TransportFailedLog(tick, Id, res.Id, amountToTake, Position));
-public class TransportFailedLog(int tick, int facilityId, string resourceId, int amount, Vector2 position) : ILogLine, ITransporterLog
+
+public class TransportFailedLog(int tick, ProductionFacility facility, string resourceId, int amount) : ILogLine, ITransporterLog
 {
     public int Tick { get; } = tick;
-    public int FacilityId { get; } = facilityId;
     public string ResourceId { get; } = resourceId;
     public int Amount { get; } = amount;
-    public Vector2 Position { get; } = position;
-    public string Format() => $"[Tick {Tick:D4}] Failed to send {Amount} of {ResourceId} at {Position}";
+    public string Format() => $"[Tick {Tick:D4}] Failed to send {Amount} of {ResourceId} at {facility.Position} for {facility.Name}";
 }
 
-
-
-
-
-//LogLines.Add(new FighterTargetLostLog(tick, Id, Target.Id, Target.Position));
 public class FighterTargetLostLog(int tick, int fighterId, int targetId, Vector2 targetPosition) : ILogLine, IFighterLog
 {
     public int Tick { get; } = tick;
@@ -107,34 +95,30 @@ public class EntityAttackedLog(int tick, int transporterId, float damage, Vector
     public string Format() => $"[Tick {Tick:D4}] Transporter {TransporterId} hit ({Damage}) at {Position} by {Name ?? "Unknown"}";
 }
 
-public class ProductionCompletedLog(int tick, int facilityId, string resourceId, int amount, Vector2 position) : ILogLine, IProductionFacilityLog
+public class ProductionCompletedLog(int tick, ProductionFacility facility, string resourceId, int amount) : ILogLine, IProductionFacilityLog //ToDo: We should replace this with a bulk production log that contains all the resources produced in a tick
 {
     public int Tick { get; } = tick;
-    public int FacilityId { get; } = facilityId;
     public string ResourceId { get; } = resourceId;
+    public ProductionFacility Facility { get; } = facility;
     public int Amount { get; } = amount;
-    public Vector2 Position { get; } = position;
-    public string Format() => $"[Tick {Tick:D4}] Completed job for {ResourceId}, output added to storage at {Position}";
+    public string Format() => $"[Tick {Tick:D4}] Completed job for {ResourceId}, output added to storage at {Facility.Position} at station {Facility.Name}";
 }
 
-public class ProductionStartedLog(int tick, int facilityId, string resourceId, int duration, Vector2 position) : ILogLine, IProductionFacilityLog
+public class ProductionStartedLog(int tick, ProductionFacility facility, string resourceId, int duration, Vector2 position) : ILogLine, IProductionFacilityLog
 {
     public int Tick { get; } = tick;
-    public int FacilityId { get; } = facilityId;
     public string ResourceId { get; } = resourceId;
     public int Duration { get; } = duration;
     public Vector2 Position { get; } = position;
-    public string Format() => $"[Tick {Tick:D4}] Started job for {ResourceId} (duration: {Duration}) at {Position}";
+    public string Format() => $"[Tick {Tick:D4}] Started job for {ResourceId} (duration: {Duration}) at {facility.Position}";
 }
 
-public class WorkshopAddedLog(int tick, int facilityId, string resourceId, int amount, Vector2 position) : ILogLine, IProductionFacilityLog
+public class WorkshopAddedLog(int tick, ProductionFacility facility, string resourceId, int amount) : ILogLine, IProductionFacilityLog
 {
     public int Tick { get; } = tick;
-    public int FacilityId { get; } = facilityId;
     public string ResourceId { get; } = resourceId;
     public int Amount { get; } = amount;
-    public Vector2 Position { get; } = position;
-    public string Format() => $"[Tick {Tick:D4}] Added {Amount} workshop(s) for {ResourceId} at {Position}";
+    public string Format() => $"[Tick {Tick:D4}] Added {Amount} workshop(s) for {ResourceId} at {facility.Position}";
 }
 
 public class TransportAssignedLog(int tick, int transporterId, string resourceId, int amount, ProductionFacility from, ProductionFacility to) : ILogLine, ITransporterLog
@@ -155,16 +139,6 @@ public class PickupLog(int tick, int transporterId, List<ResourceAmount> pickedU
     public List<ResourceAmount> PickedUp { get; } = pickedUp;
     public ProductionFacility? Facility { get; } = pf;
     public string Format() => $"[Tick {Tick:D4}] Transporter {TransporterId} picked up: {string.Join(", ", PickedUp)} from {Facility?.Name ?? "Unknown"}";
-}
-
-public class TransportSplitLog(int tick, int transporterId, List<ResourceAmount> originalCargo, List<ResourceAmount> assignedNow, List<ResourceAmount> remaining) : ILogLine
-{
-    public int Tick { get; } = tick;
-    public int TransporterId { get; } = transporterId;
-    public List<ResourceAmount> OriginalCargo { get; } = originalCargo;
-    public List<ResourceAmount> AssignedNow { get; } = assignedNow;
-    public List<ResourceAmount> Remaining { get; } = remaining;
-    public string Format() => $"[Tick {Tick:D4}] Transporter {TransporterId} split delivery: now={string.Join(", ", AssignedNow)}, remaining={string.Join(", ", Remaining)}";
 }
 
 public class DeliveryPartialLog(int tick, int transporterId, List<ResourceAmount> partial, ProductionFacility pf) : ILogLine, ITransporterLog

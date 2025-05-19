@@ -2,7 +2,7 @@
 
 namespace Factory.Core;
 
-public class GameData(Dictionary<string, Resource> resources, Dictionary<string, Recipe> recipes) 
+public class GameData(Dictionary<string, Resource> resources, Dictionary<string, Recipe> recipes)
 {
     public Dictionary<string, Resource> Resources { get; } = resources;
     public Dictionary<string, Recipe> Recipes { get; } = recipes;
@@ -84,7 +84,6 @@ public class GameData(Dictionary<string, Resource> resources, Dictionary<string,
                     .Where(push => push.resource == pull.resource)
                     .Where(push => push.facility != pull.facility)
                     .Where(push => push.playerId == pull.playerId)
-
                     .Select(push => new
                     {
                         From = push.facility,

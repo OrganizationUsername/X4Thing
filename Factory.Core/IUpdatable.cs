@@ -5,7 +5,6 @@ public interface IUpdatable
     void Tick(int currentTick);
 }
 
-
 public interface IHasName
 {
 

@@ -27,14 +27,14 @@ public class ProductionFacility : Entity, IUpdatable, IHasName
     public bool TryExport(Resource res, int amountToTake, int tick, Transporter receiver)
     {
         var success = _storage.Consume(res, amountToTake); ;
-        if (success) { LogLines.Add(new TransportSentLog(tick, Id, res.Id, amountToTake, Position, receiver)); }
-        else { LogLines.Add(new TransportFailedLog(tick, Id, res.Id, amountToTake, Position)); }
+        if (success) { LogLines.Add(new TransportSentLog(tick, res.Id, amountToTake, Position, receiver)); }
+        else { LogLines.Add(new TransportFailedLog(tick, this, res.Id, amountToTake)); }
         return success;
     }
 
     public void ReceiveImport(Resource res, int amountToTransfer, int tick, Transporter transporter)
     {
-        LogLines.Add(new TransportReceivedLog(tick, Id, res.Id, amountToTransfer, Position, transporter));
+        LogLines.Add(new TransportReceivedLog(tick, res.Id, amountToTransfer, Position, transporter));
         _storage.Add(res, amountToTransfer);
     }
 
@@ -42,7 +42,7 @@ public class ProductionFacility : Entity, IUpdatable, IHasName
     {
         if (!_workshops.TryAdd(recipe, count)) { _workshops[recipe] += count; }
         if (!_activeJobs.ContainsKey(recipe)) { _activeJobs[recipe] = []; }
-        LogLines.Add(new WorkshopAddedLog(0, Id, recipe.Output.Id, count, Position));
+        LogLines.Add(new WorkshopAddedLog(0, this, recipe.Output.Id, count));
     }
 
     public void Tick(int currentTick)
@@ -60,7 +60,7 @@ public class ProductionFacility : Entity, IUpdatable, IHasName
 
                 _storage.Add(output, recipe.OutputAmount);
                 jobs.RemoveAt(i);
-                LogLines.Add(new ProductionCompletedLog(currentTick, Id, output.Id, recipe.OutputAmount, Position));
+                LogLines.Add(new ProductionCompletedLog(currentTick, this, output.Id, recipe.OutputAmount));
             }
 
             // Step 2: Start new jobs
@@ -71,7 +71,7 @@ public class ProductionFacility : Entity, IUpdatable, IHasName
                 {
                     ConsumeInputs(recipe.Inputs);
                     jobs.Add(new ProductionJob());
-                    LogLines.Add(new ProductionStartedLog(currentTick, Id, output.Id, recipe.Duration, Position));
+                    LogLines.Add(new ProductionStartedLog(currentTick, this, output.Id, recipe.Duration, Position));
                 }
                 else { break; }
             }
