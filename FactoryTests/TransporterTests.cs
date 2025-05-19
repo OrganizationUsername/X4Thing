@@ -17,7 +17,7 @@ public class TransporterTests
 
         var dest = new ProductionFacility(new ResourceStorage(), []) { Position = new Vector2(5, 0), Name = "Dest", };
 
-        var transporter = new Transporter { Position = source.Position, MaxVolume = 10f, SpeedPerTick = 5f, Id = 42, };
+        var transporter = new Transporter { Position = source.Position, MaxVolume = 10f, SpeedPerTick = 5f, Id = 42, Name = "Transporter", };
 
         transporter.AssignTask(source, dest, [new ResourceAmount(metalBar, 3),]);
 
@@ -52,12 +52,12 @@ public class TransporterTests
 
         var sourceStorage = new ResourceStorage();
         sourceStorage.Add(metalBar, 3);
-        var source = new ProductionFacility(sourceStorage, []);
+        var source = new ProductionFacility(sourceStorage, []) { Name = "Source", };
 
         var destStorage = new ResourceStorage();
-        var dest = new ProductionFacility(destStorage, []);
+        var dest = new ProductionFacility(destStorage, []) { Name = "Destination", };
 
-        var transporter = new Transporter { Position = source.Position, };
+        var transporter = new Transporter { Position = source.Position, Name = "Transporter", };
         transporter.AssignTask(source, dest, [new(metalBar, 3),]);
 
         transporter.Tick(1); // Pickup
@@ -87,7 +87,7 @@ public class TransporterTests
         var dest = new ProductionFacility(destStorage, new Dictionary<Recipe, int> { { recipe, 1 }, }) { Position = new Vector2(5, 0), Name = "Destination", };
 
         // Transporter
-        var transporter = new Transporter { Position = new Vector2(0, 0), SpeedPerTick = 1.01f, Id = 1, };
+        var transporter = new Transporter { Position = new Vector2(0, 0), SpeedPerTick = 1.01f, Id = 1, Name = "Transporter", };
         transporter.AssignTask(source, dest, [new ResourceAmount(metalBar, 2),]);
 
         // Register all
@@ -147,7 +147,7 @@ public class TransporterTests
         var destB = new ProductionFacility(destBStorage, []) { Position = new Vector2(15, 0), Name = "DestB", };
 
         // Transporter
-        var transporter = new Transporter { Position = new Vector2(0, 0), SpeedPerTick = 1.01f, MaxVolume = 10f, Id = 99, };
+        var transporter = new Transporter { Position = new Vector2(0, 0), SpeedPerTick = 1.01f, MaxVolume = 10f, Id = 99, Name = "Transporter", };
 
         // Queue two tasks
         transporter.AssignTask(sourceA, destA, [new ResourceAmount(metalBar, 2),]);
@@ -196,19 +196,19 @@ public class TransporterTests
 
         var sourceAStorage = new ResourceStorage();
         sourceAStorage.Add(metalBar, 2);
-        var sourceA = new ProductionFacility(sourceAStorage, []) { Position = new Vector2(0, 0), };
+        var sourceA = new ProductionFacility(sourceAStorage, []) { Position = new Vector2(0, 0), Name = "SourceA", };
 
         var destAStorage = new ResourceStorage();
-        var destA = new ProductionFacility(destAStorage, []) { Position = new Vector2(5, 0), };
+        var destA = new ProductionFacility(destAStorage, []) { Position = new Vector2(5, 0), Name = "DestinationA", };
 
         var sourceBStorage = new ResourceStorage();
         sourceBStorage.Add(plastic, 1);
-        var sourceB = new ProductionFacility(sourceBStorage, []) { Position = new Vector2(10, 0), };
+        var sourceB = new ProductionFacility(sourceBStorage, []) { Position = new Vector2(10, 0), Name = "SourceB", };
 
         var destBStorage = new ResourceStorage();
-        var destB = new ProductionFacility(destBStorage, []) { Position = new Vector2(15, 0), };
+        var destB = new ProductionFacility(destBStorage, []) { Position = new Vector2(15, 0), Name = "DestinationB", };
 
-        var transporter = new Transporter { Position = new Vector2(0, 0), SpeedPerTick = 1.01f, };
+        var transporter = new Transporter { Position = new Vector2(0, 0), SpeedPerTick = 1.01f, Name = "Transporter", };
         transporter.AssignTask(sourceA, destA, [new(metalBar, 2),]);
         transporter.AssignTask(sourceB, destB, [new(plastic, 1),]);
 
@@ -266,13 +266,13 @@ public class TransporterTests
         // Source facility has 500 metal bars
         var sourceStorage = new ResourceStorage();
         sourceStorage.Add(metalBar, 500);
-        var source = new ProductionFacility(sourceStorage, []) { Position = new Vector2(0, 0), };
+        var source = new ProductionFacility(sourceStorage, []) { Position = new Vector2(0, 0), Name = "Source", };
 
         var destStorage = new ResourceStorage();
-        var dest = new ProductionFacility(destStorage, []) { Position = new Vector2(5, 0), };
+        var dest = new ProductionFacility(destStorage, []) { Position = new Vector2(5, 0), Name = "Destination", };
 
         // Transporter has very small volume capacity
-        var transporter = new Transporter { Position = new Vector2(0, 0), SpeedPerTick = 5f, MaxVolume = 10f, }; // Can carry up to 6 metal bars (6 x 1.5 = 9.0)
+        var transporter = new Transporter { Position = new Vector2(0, 0), SpeedPerTick = 5f, MaxVolume = 10f, Name = "Transporter", }; // Can carry up to 6 metal bars (6 x 1.5 = 9.0)
 
         transporter.AssignTask(source, dest, [new ResourceAmount(metalBar, 500),]);
 
@@ -315,7 +315,7 @@ public class TransporterTests
         var recipe = gameData.GetRecipe("recipe_computer_part");
         var dest = new ProductionFacility(destStorage, new Dictionary<Recipe, int> { { recipe, 1 }, }) { Position = new Vector2(5, 0), Id = 2, Name = "Destination", PlayerId = 2, };
 
-        var transporter = new Transporter { Position = new Vector2(0, 0), SpeedPerTick = 5f, MaxVolume = 10f, Id = 3, };
+        var transporter = new Transporter { Position = new Vector2(0, 0), SpeedPerTick = 5f, MaxVolume = 10f, Id = 3, Name = "Transporter", };
 
         gameData.Facilities.Add(source);
         gameData.Facilities.Add(dest);
@@ -354,7 +354,7 @@ public class TransporterTests
         var recipe = gameData.GetRecipe("recipe_computer_part");
         var dest = new ProductionFacility(destStorage, new Dictionary<Recipe, int> { { recipe, 1 }, }) { Position = new Vector2(5, 0), Id = 2, Name = "Destination", };
 
-        var transporter = new Transporter { Position = new Vector2(0, 0), SpeedPerTick = 5f, MaxVolume = 10f, Id = 3, };
+        var transporter = new Transporter { Position = new Vector2(0, 0), SpeedPerTick = 5f, MaxVolume = 10f, Id = 3, Name = "Transporter", };
 
         gameData.Facilities.Add(source);
         gameData.Facilities.Add(dest);
@@ -410,7 +410,7 @@ public class TransporterTests
         var computerRecipe = gameData.GetRecipe("recipe_computer_part");
         var dest = new ProductionFacility(destStorage, new() { { computerRecipe, 1 }, }) { Position = new Vector2(5, 0), Name = "Destination", };
 
-        var transporter = new Transporter { Position = new Vector2(0, 0), SpeedPerTick = 5f, MaxVolume = 10f, Id = 0, };
+        var transporter = new Transporter { Position = new Vector2(0, 0), SpeedPerTick = 5f, MaxVolume = 10f, Id = 0, Name = "Transporter", };
 
         gameData.Facilities.Add(source);
         gameData.Facilities.Add(dest);
@@ -460,7 +460,7 @@ public class TransporterTests
         var computerRecipe = gameData.GetRecipe("recipe_computer_part");
         var dest = new ProductionFacility(destStorage, new() { { computerRecipe, 1 }, }) { Position = new Vector2(5, 0), Name = "Destination", };
 
-        var transporter = new Transporter { Position = new Vector2(5, 0), SpeedPerTick = 1f, MaxVolume = 10f, Id = 0, };
+        var transporter = new Transporter { Position = new Vector2(5, 0), SpeedPerTick = 1f, MaxVolume = 10f, Id = 0, Name = "Transporter", };
 
         gameData.Facilities.Add(source);
         gameData.Facilities.Add(dest);
@@ -535,7 +535,7 @@ public class TransporterTests
 
         var dest = new ProductionFacility(destStorage, new() { { gameData.GetRecipe("recipe_computer_part"), 1 }, }) { Position = new Vector2(5, 0), Name = "Destination", };
 
-        var transporter = new Transporter { Position = new Vector2(0, 0), SpeedPerTick = 1f, MaxVolume = 10f, Id = 0, };
+        var transporter = new Transporter { Position = new Vector2(0, 0), SpeedPerTick = 1f, MaxVolume = 10f, Id = 0, Name = "Transporter", };
 
         gameData.Facilities.AddRange([source, dest,]);
         gameData.Transporters.Add(transporter);
@@ -654,7 +654,7 @@ public class TransporterTests
         var d = new ProductionFacility(dStorage, new() { { gameData.GetRecipe("recipe_ai_module"), 1 }, }) { Position = new Vector2(15, 0), Name = "StationD", };
 
         // --- Single Transporter
-        var transporter = new Transporter { Position = new Vector2(0, 0), SpeedPerTick = 1f, MaxVolume = 50f, Id = 42, };
+        var transporter = new Transporter { Position = new Vector2(0, 0), SpeedPerTick = 1f, MaxVolume = 50f, Id = 42, Name = "Transporter", };
 
         // --- Setup
         gameData.Facilities.AddRange([a, b, c, d,]);
@@ -847,7 +847,7 @@ public class TransporterTests
         var dest = new ProductionFacility(destStorage, []) { Position = new Vector2(5, 0), Name = "Destination", };
 
         // --- Transporter
-        var transporter = new Transporter { Position = new Vector2(0, 0), SpeedPerTick = 1f, MaxVolume = 10f, Id = 101, };
+        var transporter = new Transporter { Position = new Vector2(0, 0), SpeedPerTick = 1f, MaxVolume = 10f, Id = 101, Name = "Transporter", };
 
         // Use NewAssignTask instead of AssignTask
         transporter.AssignTask(source, dest, [new ResourceAmount(metalBar, 3),], currentTick: 0);
@@ -907,7 +907,7 @@ public class TransporterTests
         var dest = new ProductionFacility(destStorage, []) { Name = "Dest", Position = new Vector2(100, 0), };
 
         // --- Transporter (speed = 1 → 100 ticks to travel 100 units)
-        var transporter = new Transporter { Id = 1, Position = new Vector2(0, 0), SpeedPerTick = 1f, MaxVolume = 100f, };
+        var transporter = new Transporter { Id = 1, Position = new Vector2(0, 0), SpeedPerTick = 1f, MaxVolume = 100f, Name = "Transporter", };
 
         // --- Setup system
         var ticker = new Ticker { GameData = gameData, };
@@ -952,7 +952,7 @@ public class TransporterTests
         // --- Destination has no ore but asks for it via PullRequestStrategy
         var destStorage = new ResourceStorage();
         var dest = new ProductionFacility(destStorage, new() { { oreRecipe, 1 }, }) { Name = "Dest", Position = new Vector2(100, 0), PullRequestStrategy = new SustainedProductionStrategy(ticks: 1000), };// Will request ore
-        var transporter = new Transporter { Id = 1, Position = new Vector2(0, 0), SpeedPerTick = 1f, MaxVolume = 100f, }; // --- Transporter with just enough volume, slow movement
+        var transporter = new Transporter { Id = 1, Position = new Vector2(0, 0), SpeedPerTick = 1f, MaxVolume = 100f, Name = "Transporter", }; // --- Transporter with just enough volume, slow movement
 
         // --- Register all
         var ticker = new Ticker { GameData = gameData, };

@@ -91,7 +91,7 @@ public class Transporter : Ship, IUpdatable
             {
                 task.Destination.ReceiveImport(taskItem.Resource, toDeliver, tick, this); // Send it to the destination facility
                 actualDelivered.Add(new ResourceAmount(taskItem.Resource, toDeliver)); // Log the successful delivery
-                LogLines.Add(new DeliveryLog(tick, Id, task.Destination.Position, [new(taskItem.Resource, toDeliver)]));
+                LogLines.Add(new DeliveryLog(tick, Id, task.Destination.Position, [new(taskItem.Resource, toDeliver),]));
                 carried!.Amount -= toDeliver; // Subtract the delivered amount from what the transporter is carrying
             }
             if (toDeliver >= taskItem.Amount) { continue; } // If we couldn't deliver the full requested amount, record what was missing

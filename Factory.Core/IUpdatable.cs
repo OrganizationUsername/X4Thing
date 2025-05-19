@@ -7,17 +7,17 @@ public interface IUpdatable
 
 public class Resource
 {
-    public string Id { get; init; } = "";
-    public string DisplayName { get; init; } = "";
-    public float BaseValue { get; init; } = 1.0f;
-    public float Volume { get; init; } = 1.0f;
+    public required string Id { get; init; }
+    public required string DisplayName { get; init; }
+    public float BaseValue { get; init; }
+    public float Volume { get; init; }
 
     public override string ToString() => DisplayName;
 }
 
 public class Recipe
 {
-    public string Id { get; init; } = "";
+    public required string Id { get; init; }
     public Resource Output { get; init; } = null!;
     public int OutputAmount { get; init; }
     public Dictionary<Resource, int> Inputs { get; init; } = [];

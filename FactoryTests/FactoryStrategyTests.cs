@@ -15,7 +15,7 @@ public class FactoryStrategyTests
 
         // --- Facility setup: 2 workshops, no starting inventory
         var storage = new ResourceStorage();
-        var facility = new ProductionFacility(storage, new() { { metalBarRecipe, 2 }, }) { PullRequestStrategy = new SustainedProductionStrategy(ticks: 500), };
+        var facility = new ProductionFacility(storage, new() { { metalBarRecipe, 2 }, }) { PullRequestStrategy = new SustainedProductionStrategy(ticks: 500), Name = "Facility", };
 
         // --- Act: collect pull requests
         var requests = facility.GetPullRequests().ToList();
@@ -54,7 +54,7 @@ public class FactoryStrategyTests
         var targetStorage = new ResourceStorage();
         var target = new ProductionFacility(targetStorage, new() { { recipe, 2 }, }) { Name = "Target", Position = new Vector2(10, 0), PullRequestStrategy = new SustainedProductionStrategy(ticks: 500), };
 
-        var transporter = new Transporter { Position = source.Position, SpeedPerTick = 2f, MaxVolume = 15f, Id = 1, };
+        var transporter = new Transporter { Position = source.Position, SpeedPerTick = 2f, MaxVolume = 15f, Id = 1, Name = "Facility", };
 
         gameData.Facilities.Add(source);
         gameData.Facilities.Add(target);
@@ -137,7 +137,7 @@ public class FactoryStrategyTests
         var storage = new ResourceStorage();
         var facility = new ProductionFacility(storage, new() { { recipe, 2 }, }) { Name = "MetalWorks", PullRequestStrategy = new SustainedProductionStrategy(ticks: 300), Position = new Vector2(0, 0), };
 
-        var ticker = new Ticker { GameData = gameData };
+        var ticker = new Ticker { GameData = gameData, };
         ticker.Register(facility);
         ticker.RunTicks(1);
 
@@ -166,7 +166,8 @@ public class FactoryStrategyTests
         var storage = new ResourceStorage(); // empty
         var facility = new ProductionFacility(storage, new() { { recipe, 3 }, }) // 3 workshops
         {
-            PullRequestStrategy = new DefaultPullRequestStrategy()
+            Name = "Facility",
+            PullRequestStrategy = new DefaultPullRequestStrategy(),
         };
 
         // Act
@@ -189,7 +190,8 @@ public class FactoryStrategyTests
         var storage = new ResourceStorage(); // empty
         var facility = new ProductionFacility(storage, new() { { recipe, 2 }, }) // 2 workshops
         {
-            PullRequestStrategy = new SustainedProductionStrategy(ticks: 200)
+            Name = "Facility",
+            PullRequestStrategy = new SustainedProductionStrategy(ticks: 200),
         };
 
         // Act

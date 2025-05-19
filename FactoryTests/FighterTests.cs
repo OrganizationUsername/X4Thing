@@ -178,7 +178,7 @@ public class FighterTests
         gameData.Transporters.Add(transporter);
         gameData.Fighters.Add(fighter);
 
-        var ticker = new Ticker { GameData = gameData };
+        var ticker = new Ticker { GameData = gameData, };
         ticker.Register(fighter);
         ticker.Register(transporter);
 
