@@ -5,12 +5,6 @@ public interface IUpdatable
     void Tick(int currentTick);
 }
 
-public interface IHasName
-{
-
-    public string Name { get; set; }
-}
-
 public class Resource
 {
     public string Id { get; init; } = "";
@@ -20,6 +14,7 @@ public class Resource
 
     public override string ToString() => DisplayName;
 }
+
 public class Recipe
 {
     public string Id { get; init; } = "";

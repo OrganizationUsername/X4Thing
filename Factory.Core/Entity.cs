@@ -18,7 +18,7 @@ public class Ship : Entity
     public List<ResourceAmount> Carrying { get; } = [];
     public IShipTask? CurrentTask;
     public float DistanceTraveled { get; protected set; }
-    public bool TakeDamage(float attackDamage, int currentTick, IHasName hasName)
+    public bool TakeDamage(float attackDamage, int currentTick, Entity hasName)
     {
         TotalHull -= attackDamage;
         LogLines.Add(new TransporterDamagedLog(currentTick, Id, attackDamage, Position, hasName.Name));

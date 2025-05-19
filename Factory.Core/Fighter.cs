@@ -2,7 +2,7 @@
 
 namespace Factory.Core;
 
-public class Fighter : Ship, IUpdatable, IHasName
+public class Fighter : Ship, IUpdatable
 {
     public float AttackRange { get; set; } = 10f;
     public float AttackDamage { get; set; } = 10f;

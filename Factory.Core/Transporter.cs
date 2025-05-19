@@ -5,7 +5,7 @@ namespace Factory.Core;
 //ToDo: Make it so the logs from the production facilities and transporters are stored in a sortable way so I can sort them by tick and see what happened at a certain time.
 //ToDo: Make it so when transporters take or drop off product that they only take as much as they can hold.
 
-public class Transporter : Ship, IUpdatable, IHasName
+public class Transporter : Ship, IUpdatable
 {
     public float MaxVolume { get; set; } = 10f;
     private readonly Queue<TransportTask> _taskQueue = new();

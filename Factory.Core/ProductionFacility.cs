@@ -1,6 +1,6 @@
 ﻿namespace Factory.Core;
 
-public class ProductionFacility : Entity, IUpdatable, IHasName
+public class ProductionFacility : Entity, IUpdatable
 {
     private readonly ResourceStorage _storage;
     private readonly Dictionary<Recipe, int> _workshops;
@@ -23,10 +23,11 @@ public class ProductionFacility : Entity, IUpdatable, IHasName
     public ResourceStorage GetStorage() => _storage;
     public Dictionary<Recipe, int> GetWorkshops() => _workshops;
     public IPullRequestStrategy PullRequestStrategy { get; set; } = new DefaultPullRequestStrategy();
+    public List<ResourceRequest> LastRequests { get; set; } = [];
 
     public bool TryExport(Resource res, int amountToTake, int tick, Transporter receiver)
     {
-        var success = _storage.Consume(res, amountToTake); ;
+        var success = _storage.Consume(res, amountToTake);
         if (success) { LogLines.Add(new TransportSentLog(tick, res.Id, amountToTake, Position, receiver)); }
         else { LogLines.Add(new TransportFailedLog(tick, this, res.Id, amountToTake)); }
         return success;
@@ -100,8 +101,6 @@ public class ProductionFacility : Entity, IUpdatable, IHasName
         LastRequests = [.. result.Select(r => new ResourceRequest(r.resource, r.amount)),];
         return result;
     }
-
-    public List<ResourceRequest> LastRequests { get; set; } = [];
 
     public void SayWhatsOnTheWay(List<ResourceAmount> cargo)
     {
