@@ -9,7 +9,6 @@ public class Entity
     public string Name { get; set; } = "Ship";
     public Vector2 Position { get; set; }
     public int PlayerId { get; set; } = 0; //for factionId later
-
 }
 
 public class ProductionFacility : Entity, IUpdatable, IHasName
@@ -21,8 +20,8 @@ public class ProductionFacility : Entity, IUpdatable, IHasName
     public ProductionFacility(ResourceStorage storage, Dictionary<Recipe, int> recipeWorkshopAssignments)
     {
         _storage = storage;
-        _workshops = new();
-        _activeJobs = new();
+        _workshops = [];
+        _activeJobs = [];
 
         foreach (var (recipe, count) in recipeWorkshopAssignments)
         {
@@ -36,7 +35,13 @@ public class ProductionFacility : Entity, IUpdatable, IHasName
     public Dictionary<Recipe, int> GetWorkshops() => _workshops;
     public IPullRequestStrategy PullRequestStrategy { get; set; } = new DefaultPullRequestStrategy();
 
-    public bool TryExport(Resource res, int amountToTake, int tick, Transporter receiver) => _storage.Consume(res, amountToTake);
+    public bool TryExport(Resource res, int amountToTake, int tick, Transporter receiver)
+    {
+        var success = _storage.Consume(res, amountToTake); ;
+        if (success) { LogLines.Add(new TransportSentLog(tick, Id, res.Id, amountToTake, Position, receiver)); }
+        else { LogLines.Add(new TransportFailedLog(tick, Id, res.Id, amountToTake, Position)); }
+        return success;
+    }
 
     public void ReceiveImport(Resource res, int amountToTransfer, int tick, Transporter transporter)
     {
@@ -124,7 +129,7 @@ public class ProductionFacility : Entity, IUpdatable, IHasName
     public IEnumerable<(Resource resource, int amount)> GetPullRequests()
     {
         var result = PullRequestStrategy.GetRequests(this).ToList();
-        LastRequests = result.Select(r => new ResourceRequest(r.resource, r.amount)).ToList();
+        LastRequests = [.. result.Select(r => new ResourceRequest(r.resource, r.amount)),];
         return result;
     }
 
@@ -166,8 +171,8 @@ public class ResourceRequest(Resource resource, int amount)
 
 public class ResourceStorage
 {
-    private readonly Dictionary<Resource, int> _resources = new();
-    private readonly Dictionary<Resource, int> _incoming = new();
+    private readonly Dictionary<Resource, int> _resources = [];
+    private readonly Dictionary<Resource, int> _incoming = [];
 
     public Dictionary<Resource, int> GetInventory() => _resources; //ToDo: This should be a copy instead of the real thing
 

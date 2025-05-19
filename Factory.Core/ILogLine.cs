@@ -61,6 +61,31 @@ public class FighterTargetAssignedLog(int tick, int fighterId, int targetId, Vec
     public Vector2 TargetPosition { get; } = targetPosition;
     public string Format() => $"[Tick {Tick:D4}] Fighter {FighterId} assigned to target {TargetId} at {TargetPosition}";
 }
+//LogLines.Add(new TransportSentLog(tick, Id, res.Id, amountToTake, Position, receiver));
+public class TransportSentLog(int tick, int facilityId, string resourceId, int amount, Vector2 position, Transporter to) : ILogLine, ITransporterLog
+{
+    public int Tick { get; } = tick;
+    public int FacilityId { get; } = facilityId;
+    public string ResourceId { get; } = resourceId;
+    public int Amount { get; } = amount;
+    public Vector2 Position { get; } = position;
+    public Transporter To { get; } = to;
+    public string Format() => $"[Tick {Tick:D4}] Sent {Amount} of {ResourceId} to {To.Name} at {Position}";
+}
+//LogLines.Add(new TransportFailedLog(tick, Id, res.Id, amountToTake, Position));
+public class TransportFailedLog(int tick, int facilityId, string resourceId, int amount, Vector2 position) : ILogLine, ITransporterLog
+{
+    public int Tick { get; } = tick;
+    public int FacilityId { get; } = facilityId;
+    public string ResourceId { get; } = resourceId;
+    public int Amount { get; } = amount;
+    public Vector2 Position { get; } = position;
+    public string Format() => $"[Tick {Tick:D4}] Failed to send {Amount} of {ResourceId} at {Position}";
+}
+
+
+
+
 
 //LogLines.Add(new FighterTargetLostLog(tick, Id, Target.Id, Target.Position));
 public class FighterTargetLostLog(int tick, int fighterId, int targetId, Vector2 targetPosition) : ILogLine, IFighterLog
