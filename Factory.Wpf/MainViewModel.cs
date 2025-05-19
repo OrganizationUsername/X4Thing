@@ -91,7 +91,7 @@ public partial class MainViewModel : ObservableObject
     {
         _ticker.RunTicks(TickStep);
 
-        DebugText = string.Join(Environment.NewLine, _gameData.GetAllLogs(_cumulativeTick).Select(l => l.Format()));
+        DebugText = string.Join(Environment.NewLine, _gameData.GetAllLogsSinceTickNumber(_cumulativeTick).Select(l => l.Format()));
         _cumulativeTick += TickStep;
         UpdateTransporters();
         UpdateFacilities();

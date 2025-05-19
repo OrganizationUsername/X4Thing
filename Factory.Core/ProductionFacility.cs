@@ -1,15 +1,4 @@
-﻿using System.Numerics;
-
-namespace Factory.Core;
-
-public class Entity
-{
-    public List<ILogLine> LogLines { get; } = [];
-    public int Id { get; set; }
-    public string Name { get; set; } = "Ship";
-    public Vector2 Position { get; set; }
-    public int PlayerId { get; set; } = 0; //for factionId later
-}
+﻿namespace Factory.Core;
 
 public class ProductionFacility : Entity, IUpdatable, IHasName
 {
@@ -58,11 +47,9 @@ public class ProductionFacility : Entity, IUpdatable, IHasName
 
     public void Tick(int currentTick)
     {
-
         foreach (var (recipe, jobs) in _activeJobs)
         {
             var output = recipe.Output;
-
             // Step 1: Progress jobs
             for (var i = jobs.Count - 1; i >= 0; i--)
             {
@@ -92,37 +79,18 @@ public class ProductionFacility : Entity, IUpdatable, IHasName
     }
     private bool CanConsumeInputs(Dictionary<Resource, int> inputs)
     {
-        foreach (var (resource, amount) in inputs)
-        {
-            if (_storage.GetAmount(resource) < amount) { return false; }
-        }
+        foreach (var (resource, amount) in inputs) { if (_storage.GetAmount(resource) < amount) { return false; } }
         return true;
     }
 
-    private void ConsumeInputs(Dictionary<Resource, int> inputs)
-    {
-        foreach (var (resource, amount) in inputs) { _storage.Consume(resource, amount); }
-    }
-
-
-    public class ProductionJob
-    {
-        public int Elapsed;
-    }
+    private void ConsumeInputs(Dictionary<Resource, int> inputs) { foreach (var (resource, amount) in inputs) { _storage.Consume(resource, amount); } }
 
     public IEnumerable<(Resource resource, int amount)> GetPushOffers()
     {
-        var inputResources = _workshops.Keys
-            .SelectMany(recipe => recipe.Inputs.Keys)
-            .ToHashSet();
-
-        // Only offer to push resources not used as inputs, for now. Later I'll have another strategy that allows me to figure out what to give up.
-        foreach (var (res, amount) in _storage.GetAll())
+        var inputResources = _workshops.Keys.SelectMany(recipe => recipe.Inputs.Keys).ToHashSet();
+        foreach (var (res, amount) in _storage.GetAll()) // Only offer to push resources not used as inputs, for now. Later I'll have another strategy that allows me to figure out what to give up.
         {
-            if (!inputResources.Contains(res) && amount > 0)
-            {
-                yield return (res, amount);
-            }
+            if (!inputResources.Contains(res) && amount > 0) { yield return (res, amount); }
         }
     }
 
@@ -135,15 +103,9 @@ public class ProductionFacility : Entity, IUpdatable, IHasName
 
     public List<ResourceRequest> LastRequests { get; set; } = [];
 
-
     public void SayWhatsOnTheWay(List<ResourceAmount> cargo)
     {
-        //This should just let storage increase _incoming
-        foreach (var item in cargo)
-        {
-            _storage.MarkIncoming(item.Resource, item.Amount);
-        }
-
+        foreach (var item in cargo) { _storage.MarkIncoming(item.Resource, item.Amount); } //This should just let storage increase _incoming
     }
 
     public int? GetTicksUntilNextEvent()
@@ -154,8 +116,7 @@ public class ProductionFacility : Entity, IUpdatable, IHasName
             var availableWorkshops = _workshops[recipe] - jobs.Count;
             foreach (var job in jobs)
             {
-                var ticksLeft = recipe.Duration - job.Elapsed;
-                if (soonestCompletion == null || ticksLeft < soonestCompletion) { soonestCompletion = ticksLeft; }
+                if (soonestCompletion == null || recipe.Duration - job.Elapsed < soonestCompletion) { soonestCompletion = recipe.Duration - job.Elapsed; }
             }
             if (availableWorkshops > 0 && CanConsumeInputs(recipe.Inputs)) { return 0; }
         }
@@ -173,9 +134,7 @@ public class ResourceStorage
 {
     private readonly Dictionary<Resource, int> _resources = [];
     private readonly Dictionary<Resource, int> _incoming = [];
-
     public Dictionary<Resource, int> GetInventory() => _resources; //ToDo: This should be a copy instead of the real thing
-
     public Dictionary<Resource, int> GetAll() => new(_resources);
 
     public void Add(Resource type, int amount)
@@ -193,20 +152,14 @@ public class ResourceStorage
     public bool Consume(Resource type, int amount)
     {
         if (!_resources.TryGetValue(type, out var current) || current < amount) { return false; }
-
         _resources[type] -= amount;
         return true;
     }
 
-    public void MarkIncoming(Resource type, int amount)
-    {
-        _incoming.TryAdd(type, 0);
-        _incoming[type] += amount;
-    }
-
+    public void MarkIncoming(Resource type, int amount) { _incoming.TryAdd(type, 0); _incoming[type] += amount; }
     public int GetTotalIncludingIncoming(Resource type) => GetAmount(type) + GetIncomingAmount(type);
-
     public int GetAmount(Resource type) => _resources.GetValueOrDefault(type, 0);
-
     public int GetIncomingAmount(Resource type) => _incoming.GetValueOrDefault(type, 0);
 }
+
+public class ProductionJob { public int Elapsed; }

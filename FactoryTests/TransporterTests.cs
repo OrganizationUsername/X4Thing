@@ -32,7 +32,7 @@ public class TransporterTests
         gameData.Facilities.Add(source);
         gameData.Facilities.Add(dest);
         gameData.Transporters.Add(transporter);
-        var logs = gameData.GetAllLogs().ToList();
+        var logs = gameData.GetAllLogs();
         gameData.GetAllLogsFormatted();
 
         var carried = transporter.Carrying.SingleOrDefault(r => r.Resource == metalBar);
@@ -103,7 +103,7 @@ public class TransporterTests
         gameData.Facilities.Add(source);
         gameData.Facilities.Add(dest);
 
-        var logs = gameData.GetAllLogs().ToList();
+        var logs = gameData.GetAllLogs();
         //var formatted = gameData.GetAllLogsFormatted();
 
         // ✅ Log-based assertions
@@ -167,7 +167,7 @@ public class TransporterTests
         // Run enough ticks to complete both deliveries
         ticker.RunTicks(25);
 
-        var logs = gameData.GetAllLogs().ToList();
+        var logs = gameData.GetAllLogs();
 
         // ✅ First delivery
         Assert.Contains(logs, l => l is TransportAssignedLog { ResourceId: "metal_bar", } t && t.From == sourceA && t.To == destA);
@@ -301,6 +301,46 @@ public class TransporterTests
     }
 
     [Fact]
+    public void Transporter_IsNotAssigned_WhenStationsHaveDifferentPlayerIds()
+    {
+        var gameData = GameData.GetDefault();
+        var metalBar = gameData.GetResource("metal_bar");
+
+        var sourceStorage = new ResourceStorage();
+        sourceStorage.Add(metalBar, 100);
+
+        var source = new ProductionFacility(sourceStorage, []) { Position = new Vector2(0, 0), Id = 1, Name = "Source", PlayerId = 1, };
+
+        var destStorage = new ResourceStorage();
+        var recipe = gameData.GetRecipe("recipe_computer_part");
+        var dest = new ProductionFacility(destStorage, new Dictionary<Recipe, int> { { recipe, 1 }, }) { Position = new Vector2(5, 0), Id = 2, Name = "Destination", PlayerId = 2, };
+
+        var transporter = new Transporter { Position = new Vector2(0, 0), SpeedPerTick = 5f, MaxVolume = 10f, Id = 3, };
+
+        gameData.Facilities.Add(source);
+        gameData.Facilities.Add(dest);
+        gameData.Transporters.Add(transporter);
+
+        destStorage.Add(metalBar, -10);
+
+        var ticker = new Ticker { GameData = gameData, };
+        ticker.Register(source);
+        ticker.Register(dest);
+        ticker.Register(transporter);
+
+        ticker.RunTicks(5);
+
+        var logs = gameData.GetAllLogs();
+
+        Assert.DoesNotContain(logs, l => l is TransportAssignedLog);
+        Assert.DoesNotContain(logs, l => l is PickupLog);
+        Assert.DoesNotContain(logs, l => l is DeliveryLog);
+        Assert.Empty(transporter.Carrying);
+        Assert.Equal(100, sourceStorage.GetAmount(metalBar));
+        Assert.Equal(-10, destStorage.GetAmount(metalBar));
+    }
+
+    [Fact]
     public void Transporter_IsAutomaticallyAssigned_WhenStationsHavePushAndPull()
     {
         var gameData = GameData.GetDefault();
@@ -332,7 +372,7 @@ public class TransporterTests
         ticker.RunTicks(5);
 
         // Collect logs at the end
-        var logs = gameData.GetAllLogs().ToList();
+        var logs = gameData.GetAllLogs();
         gameData.GetAllLogsFormatted();
 
         // Assert key events occurred
@@ -384,7 +424,7 @@ public class TransporterTests
         // Run ticks to let production, transport, and consumption happen
         ticker.RunTicks(25);
 
-        var logs = gameData.GetAllLogs().ToList();
+        var logs = gameData.GetAllLogs();
 
         // ✅ Assertions using structured logs
         Assert.Contains(logs, l => l is TransportAssignedLog { ResourceId: "metal_bar", });
@@ -435,7 +475,7 @@ public class TransporterTests
         ticker.RunTicks(31);
 
         // Now collect logs once at the end
-        var logs = gameData.GetAllLogs().ToList();
+        var logs = gameData.GetAllLogs();
 
         // Log-based assertions
         Assert.Contains(logs, l => l is ProductionCompletedLog { ResourceId: "metal_bar", } pl && pl.Position == source.Position);
@@ -631,7 +671,7 @@ public class TransporterTests
         ticker.RunTicks(481);
 
         // --- Verify final output
-        var logs = gameData.GetAllLogs().ToList();
+        var logs = gameData.GetAllLogs();
         //var formatted = gameData.GetAllLogsFormatted();
         /*
            [Tick 0001] Started job for metal_bar (duration: 10) at <0, 0>

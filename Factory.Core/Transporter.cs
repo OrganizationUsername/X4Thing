@@ -22,9 +22,6 @@ public class Transporter : Ship, IUpdatable, IHasName
         LogLines.Add(new TransportAssignedLog(currentTick ?? 0, Id, cargo.First().Resource.Id, cargo.Sum(x => x.Amount), from, to));
     }
 
-    private float _distanceTraveled;
-    public float DistanceTraveled => _distanceTraveled;
-
     public void Tick(int tick)
     {
         if (CurrentTask is null)
@@ -38,17 +35,9 @@ public class Transporter : Ship, IUpdatable, IHasName
         if (_target is null) { return; }
 
         var task = CurrentTask!;
-        var direction = _target.Value - Position;
-        var distance = direction.Length();
 
-        if (distance > SpeedPerTick)
-        {
-            Position += Vector2.Normalize(direction) * SpeedPerTick;
-            _distanceTraveled += SpeedPerTick;
-            return;
-        }
+        if (!MoveTowards(_target.Value)) { return; }
 
-        _distanceTraveled += distance;
         Position = _target.Value;
         _target = null;
 
@@ -133,19 +122,4 @@ public class ResourceAmount(Resource resource, int amount)
     public int Amount { get; set; } = amount;
 
     public override string ToString() => $"{Amount} x {Resource.Id}";
-}
-
-public interface IShipTask
-{
-    public ProductionFacility Source { get; }
-    public ProductionFacility Destination { get; }
-}
-
-public class TransportTask(ProductionFacility source, ProductionFacility dest, List<ResourceAmount> cargo) : IShipTask
-{
-    public ProductionFacility Source { get; } = source;
-    public ProductionFacility Destination { get; } = dest;
-    public List<ResourceAmount> Cargo { get; } = cargo;
-
-    public bool HasPickedUp { get; set; }
 }
