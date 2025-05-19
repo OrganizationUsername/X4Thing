@@ -13,11 +13,7 @@ public class FactoryTests
 
         var storage = new ResourceStorage(); // No inputs
 
-        var facility = new ProductionFacility(storage, new Dictionary<Recipe, int>
-        {
-            { recipe, 1 }, // One workshop for MetalBar production
-        })
-        { Name = "Facility", };
+        var facility = new ProductionFacility(storage, new Dictionary<Recipe, int> { { recipe, 1 }, }) { Name = "Facility", };
 
         var ticker = new Ticker();
         ticker.Register(facility);
@@ -125,11 +121,7 @@ public class FactoryTests
         storage.Add(ore, 10);         // Enough for 5 jobs
         storage.Add(energy, 5);       // Enough for 5 jobs
 
-        var facility = new ProductionFacility(storage, new Dictionary<Recipe, int>
-        {
-            { recipe, 2 }, // Two workshops = two jobs in parallel
-        })
-        { Name = "Facility", };
+        var facility = new ProductionFacility(storage, new Dictionary<Recipe, int> { { recipe, 2 }, }) { Name = "Facility", }; // Two workshops = two jobs in parallel
 
         var ticker = new Ticker();
         ticker.Register(facility);
@@ -163,12 +155,7 @@ public class FactoryTests
         storage.Add(ore, 4);
         storage.Add(energy, 2);
 
-        var facility = new ProductionFacility(storage, new Dictionary<Recipe, int>
-        {
-            { metalBarRecipe, 2 },
-            { breadRecipe, 1 },
-        })
-        { Name = "Facility", };
+        var facility = new ProductionFacility(storage, new Dictionary<Recipe, int> { { metalBarRecipe, 2 }, { breadRecipe, 1 }, }) { Name = "Facility", };
 
         var ticker = new Ticker();
         ticker.Register(facility);
@@ -295,7 +282,7 @@ public class FactoryTests
         storage.Add(energy, 1);
 
         // No workshops yet
-        var facility = new ProductionFacility(storage, new Dictionary<Recipe, int>()) { Name = "Facility", };
+        var facility = new ProductionFacility(storage, []) { Name = "Facility", };
 
         var ticker = new Ticker();
         ticker.Register(facility);
@@ -336,7 +323,7 @@ public class FactoryTests
         storage.Add(ore, 2);
         storage.Add(energy, 1);
 
-        var facility = new ProductionFacility(storage, new Dictionary<Recipe, int>()) { Name = "Facility", };
+        var facility = new ProductionFacility(storage, []) { Name = "Facility", };
 
         var ticker = new Ticker();
         ticker.Register(facility);
@@ -389,11 +376,7 @@ public class FactoryTests
         var storageA = new ResourceStorage();
         storageA.Add(ore, 2);
         storageA.Add(energy, 1);
-        var stationA = new ProductionFacility(storageA, new Dictionary<Recipe, int>
-        {
-            { metalBarRecipe, 1 },
-        })
-        { Name = "Facility", };
+        var stationA = new ProductionFacility(storageA, new Dictionary<Recipe, int> { { metalBarRecipe, 1 }, }) { Name = "Facility", };
 
         // Station B: ComputerPart
         var storageB = new ResourceStorage();

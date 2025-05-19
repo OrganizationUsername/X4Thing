@@ -29,12 +29,12 @@ public class FactoryStrategyTests
            => 200 ore, 100 energy_cell needed
         */
 
-        var oreReq = requests.FirstOrDefault(r => r.resource == ore);
-        var energyReq = requests.FirstOrDefault(r => r.resource == energy);
+        var (_, i) = requests.FirstOrDefault(r => r.resource == ore);
+        var (_, amount) = requests.FirstOrDefault(r => r.resource == energy);
 
         // --- Assert
-        Assert.Equal(200, oreReq.amount);
-        Assert.Equal(100, energyReq.amount);
+        Assert.Equal(200, i);
+        Assert.Equal(100, amount);
         Assert.Equal(2, requests.Count); // Only requests required resources
     }
 
@@ -123,7 +123,6 @@ public class FactoryStrategyTests
                 Assert.True(r.Amount < 10, $"Expected partial delivery, but saw full failure for: {r.Resource.Id} x{r.Amount}");
             });
         });
-
     }
 
     [Fact]

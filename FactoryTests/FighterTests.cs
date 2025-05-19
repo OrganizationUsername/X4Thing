@@ -11,7 +11,7 @@ public class FighterTests
         var gameData = GameData.GetDefault();
         var aiModule = gameData.GetResource("ai_module");
 
-        var transporter = new Transporter { Id = 1, Name = "Target", Position = new Vector2(0, 0), TotalHull = 30f, MaxVolume = 100f, PlayerId= 1, };
+        var transporter = new Transporter { Id = 1, Name = "Target", Position = new Vector2(0, 0), TotalHull = 30f, MaxVolume = 100f, PlayerId = 1, };
         transporter.Carrying.Add(new ResourceAmount(aiModule, 5)); // Value = 50 * 10 = 500
 
         var fighter = new Fighter { Id = 99, Name = "Hunter", Position = new Vector2(50, 0), AttackDamage = 10f, SpeedPerTick = 10f, AttackRange = 50f, MinimumValue = 20f, PlayerId = 2, };
@@ -84,28 +84,10 @@ public class FighterTests
         var gameData = GameData.GetDefault();
         var aiModule = gameData.GetResource("ai_module");
 
-        var transporter = new Transporter
-        {
-            Id = 1,
-            Name = "ValuableTarget",
-            Position = new Vector2(0, 0),
-            TotalHull = 50,
-            MaxVolume = 100,
-            PlayerId = 2,
-        };
+        var transporter = new Transporter { Id = 1, Name = "ValuableTarget", Position = new Vector2(0, 0), TotalHull = 50, MaxVolume = 100, PlayerId = 2, };
         transporter.Carrying.Add(new ResourceAmount(aiModule, 5)); // Value: 5 * 50 = 250
 
-        var fighter = new Fighter
-        {
-            Id = 2,
-            Name = "Interceptor",
-            Position = new Vector2(100, 0),
-            SpeedPerTick = 10f,
-            AttackRange = 5f,
-            AttackDamage = 25f,
-            MinimumValue = 100f, // only go after high value
-            PlayerId = 1,
-        };
+        var fighter = new Fighter { Id = 2, Name = "Interceptor", Position = new Vector2(100, 0), SpeedPerTick = 10f, AttackRange = 5f, AttackDamage = 25f, MinimumValue = 100f, PlayerId = 1, };  // only go after high value
 
         gameData.Transporters.Add(transporter);
         gameData.Fighters.Add(fighter);
@@ -121,15 +103,9 @@ public class FighterTests
         ticker.RunTicks(50);
 
         var logs = gameData.GetAllLogs();
-        var assignmentLog = logs.OfType<FighterTargetAssignedLog>()
-            .FirstOrDefault(l => l.FighterId == fighter.Id && l.TargetId == transporter.Id);
-
-        var damageLogs = logs.OfType<TransporterDamagedLog>()
-            .Where(log => log.TransporterId == transporter.Id)
-            .ToList();
-
-        var destroyed = logs.OfType<TransporterDestroyedLog>()
-            .Any(log => log.TransporterId == transporter.Id);
+        var assignmentLog = logs.OfType<FighterTargetAssignedLog>().FirstOrDefault(l => l.FighterId == fighter.Id && l.TargetId == transporter.Id);
+        var damageLogs = logs.OfType<TransporterDamagedLog>().Where(log => log.TransporterId == transporter.Id).ToList();
+        var destroyed = logs.OfType<TransporterDestroyedLog>().Any(log => log.TransporterId == transporter.Id);
 
         //var debugText = gameData.GetAllLogsFormatted();
         /*
@@ -151,29 +127,10 @@ public class FighterTests
     {
         var gameData = GameData.GetDefault();
         var aiModule = gameData.GetResource("ai_module");
-
-        var transporter = new Transporter
-        {
-            Id = 1,
-            Name = "FriendlyFreighter",
-            Position = new Vector2(0, 0),
-            TotalHull = 50,
-            MaxVolume = 100,
-            PlayerId = 1, // Same faction
-        };
+        var transporter = new Transporter { Id = 1, Name = "FriendlyFreighter", Position = new Vector2(0, 0), TotalHull = 50, MaxVolume = 100, PlayerId = 1, };  // Same faction
         transporter.Carrying.Add(new ResourceAmount(aiModule, 5)); // Value: 250
 
-        var fighter = new Fighter
-        {
-            Id = 2,
-            Name = "Interceptor",
-            Position = new Vector2(100, 0),
-            SpeedPerTick = 10f,
-            AttackRange = 5f,
-            AttackDamage = 25f,
-            MinimumValue = 100f,
-            PlayerId = 1, // Same faction
-        };
+        var fighter = new Fighter { Id = 2, Name = "Interceptor", Position = new Vector2(100, 0), SpeedPerTick = 10f, AttackRange = 5f, AttackDamage = 25f, MinimumValue = 100f, PlayerId = 1, }; // Same faction
 
         gameData.Transporters.Add(transporter);
         gameData.Fighters.Add(fighter);
@@ -209,30 +166,10 @@ public class FighterTests
         var source = new ProductionFacility(sourceStorage, []) { Name = "Source", Position = new Vector2(0, 0), };
 
         var dest = new ProductionFacility(new ResourceStorage(), []) { Name = "Dest", Position = new Vector2(50, 0), };
-
-        var transporter = new Transporter
-        {
-            Id = 1,
-            Name = "Freighter",
-            Position = new Vector2(0, 0),
-            SpeedPerTick = 10f,
-            MaxVolume = 100f,
-            PlayerId = 2,
-        };
+        var transporter = new Transporter { Id = 1, Name = "Freighter", Position = new Vector2(0, 0), SpeedPerTick = 10f, MaxVolume = 100f, PlayerId = 2, };
 
         transporter.AssignTask(source, dest, [new ResourceAmount(aiModule, 10),]); // Should be carried in one go
-
-        var fighter = new Fighter
-        {
-            Id = 99,
-            Name = "Raider",
-            Position = new Vector2(1000, 0), // Very far away
-            SpeedPerTick = 10f,
-            AttackRange = 5f,
-            AttackDamage = 10f,
-            MinimumValue = 200f, // Will initially qualify
-            PlayerId = 1,
-        };
+        var fighter = new Fighter { Id = 99, Name = "Raider", Position = new Vector2(1000, 0), SpeedPerTick = 10f, AttackRange = 5f, AttackDamage = 10f, MinimumValue = 200f, PlayerId = 1, }; // Very far away // Will initially qualify
 
         gameData.Facilities.Add(source);
         gameData.Facilities.Add(dest);

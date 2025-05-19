@@ -6,7 +6,7 @@ public class Entity
 {
     public List<ILogLine> LogLines { get; } = [];
     public int Id { get; set; }
-    public required string Name { get; set; }// = "Unknown";
+    public required string Name { get; set; }
     public Vector2 Position { get; set; }
     public int PlayerId { get; set; } = 0;
 }
