@@ -21,6 +21,7 @@ public class HighestBenefitProductionStrategy : IProductionStrategy
 
 public class DesperateProductionStrategy : IProductionStrategy
 {
+    //maybe this could also take in the resource that we're desperate for. Then we can just use that to pick the recipe.
     public Recipe? SelectRecipe(ResourceStorage storage, List<Recipe> availableRecipes)
     {
         return availableRecipes
@@ -46,7 +47,7 @@ public class ProductionFacility : Entity, IUpdatable
     private readonly Dictionary<Recipe, int> _workshops;
     private readonly Dictionary<Recipe, List<ProductionJob>> _activeJobs;
 
-    private readonly List<WorkshopInstance> _workshopInstances = [];
+    public readonly List<WorkshopInstance> WorkshopInstances = [];
     private bool UseFlexibleWorkshops => _workshops.Count == 0;
 
 
@@ -99,7 +100,7 @@ public class ProductionFacility : Entity, IUpdatable
 
     public void AddProductionModule(ProductionModule productionModule)
     {
-        _workshopInstances.Add(new WorkshopInstance { Module = productionModule });
+        WorkshopInstances.Add(new WorkshopInstance { Module = productionModule });
         //LogLines.Add(new FlexibleWorkshopAddedLog(0, this, productionModule.Recipes.Select(r => r.Output.Id).ToList()));
     }
 
@@ -111,7 +112,7 @@ public class ProductionFacility : Entity, IUpdatable
 
     private void TickFlexible(int currentTick)
     {
-        foreach (var instance in _workshopInstances)
+        foreach (var instance in WorkshopInstances)
         {
             var job = instance.ActiveJob;
 
@@ -132,10 +133,13 @@ public class ProductionFacility : Entity, IUpdatable
                 if (chosen != null && CanConsumeInputs(chosen.Inputs))
                 {
                     ConsumeInputs(chosen.Inputs);
-                    instance.ActiveJob = new ProductionJob { Recipe = chosen };
+                    instance.ActiveJob = new ProductionJob { Recipe = chosen, };
                     LogLines.Add(new ProductionStartedLog(currentTick, this, chosen.Output.Id, chosen.Duration, Position, chosen));
+                    instance.TimeSinceLastStarted = 0;
                 }
             }
+
+            if (instance.ActiveJob is null) { instance.TimeSinceLastStarted++; }
         }
     }
 
@@ -217,8 +221,9 @@ public class ProductionFacility : Entity, IUpdatable
 
 public class WorkshopInstance
 {
-    public required ProductionModule Module { get; set; } 
+    public required ProductionModule Module { get; set; }
     public ProductionJob? ActiveJob { get; set; }
+    public int TimeSinceLastStarted { get; set; }
 }
 
 public class ResourceRequest(Resource resource, int amount)

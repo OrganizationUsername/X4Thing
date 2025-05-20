@@ -122,13 +122,12 @@ public class GameData
         var aiModule = resources["ai_module"];
         var sand = resources["sand"];
 
-
         var recipes = new Dictionary<string, Recipe>
         {
             { "recipe_ai_module", new Recipe { Id = "recipe_ai_module", Output = aiModule, OutputAmount = 1, Duration = 12, Inputs = new Dictionary<Resource, int> { { computerPart, 1 }, { siliconWafer, 2 }, }, Benefit = 22f, } },
             { "recipe_silicon_wafer", new Recipe { Id = "recipe_silicon_wafer", Output = siliconWafer, OutputAmount = 1, Duration = 6, Inputs = new Dictionary<Resource, int> { { sand, 3 }, { energyCell, 1 }, }, Benefit = 2f, } },
             { "recipe_metal_bar", new Recipe { Id = "recipe_metal_bar", Output = metalBar, OutputAmount = 1, Duration = 10, Inputs = new Dictionary<Resource, int> { { ore, 2 }, { energyCell, 1 }, }, Benefit = 2f, } },
-            { "recipe_metal_bar_bulk", new Recipe{Id = "recipe_metal_bar_bulk", Output = metalBar, OutputAmount = 5, Duration = 20, Inputs = new Dictionary<Resource,  int>{{ ore,  15 }, { energyCell,  10 }, }, Benefit = 6f, }},
+            { "recipe_metal_bar_bulk", new Recipe{Id = "recipe_metal_bar_bulk", Output = metalBar, OutputAmount = 5, Duration = 10, Inputs = new Dictionary<Resource,  int>{{ ore,  15 }, { energyCell,  15 }, }, Benefit = 6f, }},
             { "recipe_bread", new Recipe { Id = "recipe_bread", Output = bread, OutputAmount = 1, Duration = 8, Inputs = new Dictionary<Resource, int> { { wheat, 2 }, { flour, 1 }, }, Benefit = 1.5f, } },
             { "recipe_computer_part", new Recipe { Id = "recipe_computer_part", Output = computerPart, OutputAmount = 1, Duration = 10, Inputs = new Dictionary<Resource, int> { { metalBar, 2 }, { plastic, 1 }, }, Benefit = 8f, } },
             { "recipe_energy_solar", new Recipe { Id = "recipe_energy_solar", Output = energyCell, OutputAmount = 1, Duration = 6, Inputs = new Dictionary<Resource, int>(), Benefit = 1.5f, } },

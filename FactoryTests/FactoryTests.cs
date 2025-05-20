@@ -542,8 +542,6 @@ public class FactoryTests
         var solarShop = gameData.GetWorkshop("solar_generator");
 
         var productionFacility = new ProductionFacility { Name = "Solar Plant", Position = new Vector2(0, 0), };
-
-
         productionFacility.AddProductionModule(solarShop);
 
         var ticker = new Ticker { GameData = gameData, };
@@ -569,16 +567,12 @@ public class FactoryTests
         var metalForge = gameData.GetWorkshop("metal_forge");
         metalForge.Strategy = new DesperateProductionStrategy();
 
-        var facility = new ProductionFacility
-        {
-            Name = "Emergency Forge",
-            Position = new Vector2(0, 0),
-        };
+        var facility = new ProductionFacility { Name = "Emergency Forge", Position = new Vector2(0, 0), };
+        facility.AddProductionModule(metalForge);
 
         facility.GetStorage().Add(ore, 50);
         facility.GetStorage().Add(energy, 20);
-        
-        facility.AddProductionModule(metalForge);
+
 
         var ticker = new Ticker { GameData = gameData, };
         ticker.Register(facility);
@@ -590,7 +584,7 @@ public class FactoryTests
         var startedLog = logs.OfType<ProductionStartedLog>().FirstOrDefault();
 
         Assert.NotNull(startedLog);
-        Assert.Equal("recipe_metal_bar_bulk", startedLog.Recipe.Id); //FAILS
+        Assert.Equal("recipe_metal_bar_bulk", startedLog.Recipe.Id);
     }
 
     [Fact]
@@ -601,26 +595,93 @@ public class FactoryTests
         var energy = gameData.GetResource("energy_cell");
         var metalForge = gameData.GetWorkshop("metal_forge");
 
-        var facility = new ProductionFacility
-        {
-            Name = "Efficient Forge",
-            Position = new Vector2(0, 0),
-        };
+        var facility = new ProductionFacility { Name = "Efficient Forge", Position = new Vector2(0, 0), };
+        facility.AddProductionModule(metalForge);
 
         facility.GetStorage().Add(ore, 50);
         facility.GetStorage().Add(energy, 20);
-        facility.AddProductionModule(metalForge);
 
-        var ticker = new Ticker { GameData = gameData };
+        var ticker = new Ticker { GameData = gameData, };
         ticker.Register(facility);
         gameData.Facilities.Add(facility);
 
-        ticker.RunTicks(2); // enough for one job to start
+        ticker.RunTicks(2);
 
         var logs = gameData.GetAllLogs();
         var startedLog = logs.OfType<ProductionStartedLog>().FirstOrDefault();
 
         Assert.NotNull(startedLog);
-        Assert.Equal("recipe_metal_bar", startedLog.Recipe.Id); // ✅ Lean recipe should now win
+        Assert.Equal("recipe_metal_bar", startedLog.Recipe.Id);
     }
+
+    [Fact]
+    public void ComputerAssembler_TracksTimeSinceLastJobStart_WhenMetalBarsMissing()
+    {
+        var gameData = GameData.GetDefault();
+        var computerAssembler = gameData.GetWorkshop("computer_assembler");
+        var plastic = gameData.GetResource("plastic");
+
+        // Create a facility with one assembler but no metal bars
+        var facility = new ProductionFacility { Name = "Starved Assembler", Position = new Vector2(0, 0), };
+        facility.AddProductionModule(computerAssembler);
+        facility.GetStorage().Add(plastic, 100); // Add enough plastic
+
+        var ticker = new Ticker { GameData = gameData, };
+        ticker.Register(facility);
+        gameData.Facilities.Add(facility);
+        ticker.RunTicks(50); // Run a number of ticks where metal bars are unavailable
+
+        var instance = facility.WorkshopInstances.FirstOrDefault(w => w.Module.Name == "computer_assembler");
+
+        Assert.NotNull(instance);
+        Assert.Null(instance.ActiveJob); // Should not have started
+        Assert.True(instance.TimeSinceLastStarted >= 50, $"Expected starvation of at least 50 ticks, got {instance.TimeSinceLastStarted}");
+
+        // Optionally, confirm a ProductionStartedLog did NOT exist
+        var logs = gameData.GetAllLogs();
+        var anyStarted = logs.OfType<ProductionStartedLog>().Any(l => l.Recipe.Output.Id == "computer_part");
+        Assert.False(anyStarted, "Expected no computer part jobs to start due to missing metal bars");
+    }
+
+    [Fact]
+    public void GameData_BoostsMetalProduction_WhenWidespreadShortageDetected()
+    {
+        var gameData = GameData.GetDefault();
+        var ore = gameData.GetResource("ore");
+        var energy = gameData.GetResource("energy_cell");
+        var metalBar = gameData.GetResource("metal_bar");
+        var plastic = gameData.GetResource("plastic");
+        var forge = gameData.GetWorkshop("metal_forge");
+        forge.Strategy = new HighestBenefitProductionStrategy();
+        var assembler = gameData.GetWorkshop("computer_assembler"); //using this 5 times. Make sure it actually works. Should since each one makes a new WorkshopInstance
+
+        var station = new ProductionFacility { Name = $"Assembler", Position = new Vector2(10, 0), };
+
+        for (var i = 0; i < 5; i++) // Create 4 assembler stations
+        {
+            station.AddProductionModule(assembler);
+            station.GetStorage().Add(plastic, 100);
+            gameData.Facilities.Add(station);
+        }
+        station.AddProductionModule(forge);
+        station.GetStorage().Add(metalBar, 0); // Starts empty
+        station.GetStorage().Add(ore, 500);
+        station.GetStorage().Add(energy, 200);
+
+        var ticker = new Ticker { GameData = gameData, };
+        ticker.Register(station); //ToDo: I should stop registering facilities directly in the ticker and just grab everything from the gameData
+
+        // Add demand-tracking logic (see below)
+        //gameData.EnableShortageDetectionFor(metalBar);
+
+        // Simulate enough ticks for demand pressure to mount
+        ticker.RunTicks(200);
+
+        // ⏳ Forge should now have flipped to DesperateProductionStrategy
+        var activeStrategy = forge.Strategy;
+        Assert.IsType<DesperateProductionStrategy>(activeStrategy);
+    }
+
+
+
 }
