@@ -657,31 +657,28 @@ public class FactoryTests
 
         var station = new ProductionFacility { Name = $"Assembler", Position = new Vector2(10, 0), };
 
-        for (var i = 0; i < 5; i++) // Create 4 assembler stations
+        for (var i = 0; i < 4; i++) // Create 4 assembler stations
         {
             station.AddProductionModule(assembler);
             station.GetStorage().Add(plastic, 100);
-            gameData.Facilities.Add(station);
         }
         station.AddProductionModule(forge);
         station.GetStorage().Add(metalBar, 0); // Starts empty
         station.GetStorage().Add(ore, 500);
         station.GetStorage().Add(energy, 200);
+        gameData.Facilities.Add(station);
 
         var ticker = new Ticker { GameData = gameData, };
         ticker.Register(station); //ToDo: I should stop registering facilities directly in the ticker and just grab everything from the gameData
 
-        // Add demand-tracking logic (see below)
-        //gameData.EnableShortageDetectionFor(metalBar);
-
         // Simulate enough ticks for demand pressure to mount
+        //ToDo: This is what still needs to be implemented
         ticker.RunTicks(200);
 
         // ⏳ Forge should now have flipped to DesperateProductionStrategy
         var activeStrategy = forge.Strategy;
         Assert.IsType<DesperateProductionStrategy>(activeStrategy);
     }
-
-
+    //ToDo: At some point I have to figure out when to calm down. Maybe it depends on how many I have on hand and how long I've had a large stock.
 
 }
