@@ -104,13 +104,14 @@ public class ProductionCompletedLog(int tick, ProductionFacility facility, strin
     public string Format() => $"[Tick {Tick:D4}] Completed job for {ResourceId}, output added to storage at {Facility.Position} at station {Facility.Name}";
 }
 
-public class ProductionStartedLog(int tick, ProductionFacility facility, string resourceId, int duration, Vector2 position) : ILogLine, IProductionFacilityLog
+public class ProductionStartedLog(int tick, ProductionFacility facility, string resourceId, int duration, Vector2 position, Recipe recipe) : ILogLine, IProductionFacilityLog
 {
     public int Tick { get; } = tick;
     public string ResourceId { get; } = resourceId;
     public int Duration { get; } = duration;
     public Vector2 Position { get; } = position;
-    public string Format() => $"[Tick {Tick:D4}] Started job for {ResourceId} (duration: {Duration}) at {facility.Position}";
+    public Recipe Recipe { get; } = recipe;
+    public string Format() => $"[Tick {Tick:D4}] Started job for {ResourceId} (duration: {Duration}) at {facility.Position} with Recipe = {recipe.Id}";
 }
 
 public class WorkshopAddedLog(int tick, ProductionFacility facility, string resourceId, int amount) : ILogLine, IProductionFacilityLog

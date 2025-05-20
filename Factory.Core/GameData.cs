@@ -2,10 +2,18 @@
 
 namespace Factory.Core;
 
-public class GameData(Dictionary<string, Resource> resources, Dictionary<string, Recipe> recipes)
+public class GameData
 {
-    public Dictionary<string, Resource> Resources { get; } = resources;
-    public Dictionary<string, Recipe> Recipes { get; } = recipes;
+    public GameData(Dictionary<string, Resource> resources, Dictionary<string, Recipe> recipes, Dictionary<string, ProductionModule> workshops)
+    {
+        Resources = resources;
+        Recipes = recipes;
+        Workshops = workshops;
+    }
+
+    public Dictionary<string, Resource> Resources { get; }
+    public Dictionary<string, Recipe> Recipes { get; }
+    public Dictionary<string, ProductionModule> Workshops { get; } = new();
     public List<ProductionFacility> Facilities { get; } = [];
     public List<Transporter> Transporters { get; } = [];
     public List<Fighter> Fighters { get; } = [];
@@ -13,7 +21,9 @@ public class GameData(Dictionary<string, Resource> resources, Dictionary<string,
     public static GameData GetDefault()
     {
         var resources = CreateInitialResourcesDictionary();
-        return new GameData(resources, CreateRecipesDictionary(resources));
+        var recipes = CreateRecipesDictionary(resources);
+        var workshops = GetWorkshopModules(recipes);
+        return new GameData(resources, recipes, workshops);
     }
 
     public List<ILogLine> GetAllLogsSinceTickNumber(int tick)
@@ -85,6 +95,19 @@ public class GameData(Dictionary<string, Resource> resources, Dictionary<string,
             //ToDo: Why aren't we returning all of the results and letting them pick?
             .FirstOrDefault();
 
+    public static Dictionary<string, ProductionModule> GetWorkshopModules(Dictionary<string, Recipe> allRecipes)
+    {
+        return new Dictionary<string, ProductionModule>
+        {
+            ["metal_forge"] = new() { Name = "metal_forge", Recipes = [allRecipes["recipe_metal_bar"], allRecipes["recipe_metal_bar_bulk"],], },
+            ["solar_generator"] = new() { Name = "solar_generator", Recipes = [allRecipes["recipe_energy_solar"],], },
+            ["computer_assembler"] = new() { Name = "computer_assembler", Recipes = [allRecipes["recipe_computer_part"],], },
+            ["silicon_fab"] = new() { Name = "silicon_fab", Recipes = [allRecipes["recipe_silicon_wafer"],], },
+            ["ai_lab"] = new() { Name = "ai_lab", Recipes = [allRecipes["recipe_ai_module"],], },
+            ["bakery"] = new() { Name = "bakery", Recipes = [allRecipes["recipe_bread"],], },
+        };
+    }
+
     private static Dictionary<string, Recipe> CreateRecipesDictionary(Dictionary<string, Resource> resources)
     {
         var ore = resources["ore"];
@@ -105,9 +128,10 @@ public class GameData(Dictionary<string, Resource> resources, Dictionary<string,
             { "recipe_ai_module", new Recipe { Id = "recipe_ai_module", Output = aiModule, OutputAmount = 1, Duration = 12, Inputs = new Dictionary<Resource, int> { { computerPart, 1 }, { siliconWafer, 2 }, }, Benefit = 22f, } },
             { "recipe_silicon_wafer", new Recipe { Id = "recipe_silicon_wafer", Output = siliconWafer, OutputAmount = 1, Duration = 6, Inputs = new Dictionary<Resource, int> { { sand, 3 }, { energyCell, 1 }, }, Benefit = 2f, } },
             { "recipe_metal_bar", new Recipe { Id = "recipe_metal_bar", Output = metalBar, OutputAmount = 1, Duration = 10, Inputs = new Dictionary<Resource, int> { { ore, 2 }, { energyCell, 1 }, }, Benefit = 2f, } },
+            { "recipe_metal_bar_bulk", new Recipe{Id = "recipe_metal_bar_bulk", Output = metalBar, OutputAmount = 5, Duration = 20, Inputs = new Dictionary<Resource,  int>{{ ore,  15 }, { energyCell,  10 }, }, Benefit = 6f, }},
             { "recipe_bread", new Recipe { Id = "recipe_bread", Output = bread, OutputAmount = 1, Duration = 8, Inputs = new Dictionary<Resource, int> { { wheat, 2 }, { flour, 1 }, }, Benefit = 1.5f, } },
-            { "recipe_computer_part", new Recipe { Id = "recipe_computer_part", Output = computerPart, OutputAmount = 1, Duration = 10, Inputs = new Dictionary<Resource, int> { { metalBar, 2 }, { plastic, 1 }, }, Benefit = 8f, }
-            },
+            { "recipe_computer_part", new Recipe { Id = "recipe_computer_part", Output = computerPart, OutputAmount = 1, Duration = 10, Inputs = new Dictionary<Resource, int> { { metalBar, 2 }, { plastic, 1 }, }, Benefit = 8f, } },
+            { "recipe_energy_solar", new Recipe { Id = "recipe_energy_solar", Output = energyCell, OutputAmount = 1, Duration = 6, Inputs = new Dictionary<Resource, int>(), Benefit = 1.5f, } },
         };
         return recipes;
     }
@@ -151,6 +175,15 @@ public class GameData(Dictionary<string, Resource> resources, Dictionary<string,
 
     public Resource GetResource(string id) => Resources[id];
     public Recipe GetRecipe(string id) => Recipes[id];
+    public ProductionModule GetWorkshop(string id) => Workshops[id];
+
+}
+
+public class ProductionModule
+{
+    public required string Name { get; set; }
+    public List<Recipe> Recipes { get; set; } = [];
+    public IProductionStrategy Strategy { get; set; } = new HighestBenefitProductionStrategy();
 }
 
 public class TradeMission(ProductionFacility from, ProductionFacility to, Resource resource, int amount)

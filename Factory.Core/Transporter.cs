@@ -13,6 +13,11 @@ namespace Factory.Core;
 //ToDo: Actually, I don't use money in a meaningful way right now. I guess that makes sense since I'm only doing trade with my own faction. Later on, I want to make sure that I can trade with other factions if it benefits me.
 //ToDo: Probably want to rework the recipes/values since they're not really balanced.
 
+/*
+ How could I go about making it so a workshop could make two recipes, but we decide the best one available. Maybe we could either wait for solar to happen or we could spend two chemicals together to get one quick, but with a much lower benefit. Help walk me through this route. maybe also if we were desperate for something done quickly, we could do more iron bars at once at much higher expense, and leave those details up to a strategy to be employed by the individual station.
+ */
+
+
 public class Transporter : Ship, IUpdatable
 {
     public float MaxVolume { get; set; } = 10f;

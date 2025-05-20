@@ -1,4 +1,5 @@
 ﻿using Factory.Core;
+using System.Numerics;
 
 namespace Factory.Tests;
 
@@ -413,5 +414,213 @@ public class FactoryTests
         // Tick 23: done
         ticker.RunTicks(1);
         Assert.Equal(1, storageB.GetAmount(computerPart));
+    }
+
+    [Fact]
+    public void SolarPlant_ProducesEnergyCellWithoutInputs()
+    {
+        var gameData = GameData.GetDefault();
+        var energyCell = gameData.GetResource("energy_cell");
+        var solarRecipe = gameData.GetRecipe("recipe_energy_solar");
+
+        var storage = new ResourceStorage();
+        var solarPlant = new ProductionFacility(storage, new() { { solarRecipe, 1 }, }) { Name = "Solar", Position = new Vector2(0, 0), Id = 1, };
+
+        var ticker = new Ticker { GameData = gameData, };
+        gameData.Facilities.Add(solarPlant);
+        ticker.Register(solarPlant);
+
+        var ticksToRun = solarRecipe.Duration * 3 + 1; // run enough ticks to produce 3 energy cells. 1 tick to start or something
+        ticker.RunTicks(ticksToRun);
+
+        var amount = storage.GetAmount(energyCell);
+        var logs = gameData.GetAllLogs();
+        //var debugLogs = gameData.GetAllLogsFormatted();
+        /*
+           [Tick 0001] Started job for energy_cell (duration: 6) at <0, 0>
+           [Tick 0007] Completed job for energy_cell, output added to storage at <0, 0> at station Solar
+           [Tick 0007] Started job for energy_cell (duration: 6) at <0, 0>
+           [Tick 0013] Completed job for energy_cell, output added to storage at <0, 0> at station Solar
+           [Tick 0013] Started job for energy_cell (duration: 6) at <0, 0>
+           [Tick 0019] Completed job for energy_cell, output added to storage at <0, 0> at station Solar
+           [Tick 0019] Started job for energy_cell (duration: 6) at <0, 0>         
+         */
+
+        Assert.True(amount >= 3, $"Expected at least 3 energy cells, got {amount}");
+        Assert.Equal(0, storage.GetIncomingAmount(energyCell));
+
+        Assert.Contains(logs, l => l is ProductionCompletedLog pl && pl.ResourceId == energyCell.Id);
+    }
+
+
+    [Fact]
+    public void Facility_ProducesMetalBars_AfterGeneratingEnergyCells()
+    {
+        var gameData = GameData.GetDefault();
+        var ore = gameData.GetResource("ore");
+        var energyCell = gameData.GetResource("energy_cell");
+        var metalBar = gameData.GetResource("metal_bar");
+
+        var solarRecipe = gameData.GetRecipe("recipe_energy_solar");
+        var metalRecipe = gameData.GetRecipe("recipe_metal_bar");
+
+        var storage = new ResourceStorage();
+        storage.Add(ore, 10); // Enough for 5 metal bars, but initially no energy cells
+
+        var facility = new ProductionFacility(storage, new() { { solarRecipe, 1 }, { metalRecipe, 1 }, }) { Name = "DualFacility", Position = new Vector2(0, 0), Id = 1, };
+
+        var ticker = new Ticker { GameData = gameData, };
+        gameData.Facilities.Add(facility);
+        ticker.Register(facility);
+        var ticksToRun = 100;
+        ticker.RunTicks(ticksToRun);
+
+        var logs = gameData.GetAllLogs();
+        var metal = storage.GetAmount(metalBar);
+        var oreLeft = storage.GetAmount(ore);
+
+        //var debug = gameData.GetAllLogsFormatted();
+        /*
+           [Tick 0001] Started job for energy_cell (duration: 6) at <0, 0>
+           [Tick 0007] Completed job for energy_cell, output added to storage at <0, 0> at station DualFacility
+           [Tick 0007] Started job for energy_cell (duration: 6) at <0, 0>
+           [Tick 0007] Started job for metal_bar (duration: 10) at <0, 0>
+           [Tick 0013] Completed job for energy_cell, output added to storage at <0, 0> at station DualFacility
+           [Tick 0013] Started job for energy_cell (duration: 6) at <0, 0>
+           [Tick 0017] Completed job for metal_bar, output added to storage at <0, 0> at station DualFacility
+           [Tick 0017] Started job for metal_bar (duration: 10) at <0, 0>
+           [Tick 0019] Completed job for energy_cell, output added to storage at <0, 0> at station DualFacility
+           [Tick 0019] Started job for energy_cell (duration: 6) at <0, 0>
+           [Tick 0025] Completed job for energy_cell, output added to storage at <0, 0> at station DualFacility
+           [Tick 0025] Started job for energy_cell (duration: 6) at <0, 0>
+           [Tick 0027] Completed job for metal_bar, output added to storage at <0, 0> at station DualFacility
+           [Tick 0027] Started job for metal_bar (duration: 10) at <0, 0>
+           [Tick 0031] Completed job for energy_cell, output added to storage at <0, 0> at station DualFacility
+           [Tick 0031] Started job for energy_cell (duration: 6) at <0, 0>
+           [Tick 0037] Completed job for energy_cell, output added to storage at <0, 0> at station DualFacility
+           [Tick 0037] Started job for energy_cell (duration: 6) at <0, 0>
+           [Tick 0037] Completed job for metal_bar, output added to storage at <0, 0> at station DualFacility
+           [Tick 0037] Started job for metal_bar (duration: 10) at <0, 0>
+           [Tick 0043] Completed job for energy_cell, output added to storage at <0, 0> at station DualFacility
+           [Tick 0043] Started job for energy_cell (duration: 6) at <0, 0>
+           [Tick 0047] Completed job for metal_bar, output added to storage at <0, 0> at station DualFacility
+           [Tick 0047] Started job for metal_bar (duration: 10) at <0, 0>
+           [Tick 0049] Completed job for energy_cell, output added to storage at <0, 0> at station DualFacility
+           [Tick 0049] Started job for energy_cell (duration: 6) at <0, 0>
+           [Tick 0055] Completed job for energy_cell, output added to storage at <0, 0> at station DualFacility
+           [Tick 0055] Started job for energy_cell (duration: 6) at <0, 0>
+           [Tick 0057] Completed job for metal_bar, output added to storage at <0, 0> at station DualFacility
+           [Tick 0061] Completed job for energy_cell, output added to storage at <0, 0> at station DualFacility
+           [Tick 0061] Started job for energy_cell (duration: 6) at <0, 0>
+           [Tick 0067] Completed job for energy_cell, output added to storage at <0, 0> at station DualFacility
+           [Tick 0067] Started job for energy_cell (duration: 6) at <0, 0>
+           [Tick 0073] Completed job for energy_cell, output added to storage at <0, 0> at station DualFacility
+           [Tick 0073] Started job for energy_cell (duration: 6) at <0, 0>
+           [Tick 0079] Completed job for energy_cell, output added to storage at <0, 0> at station DualFacility
+           [Tick 0079] Started job for energy_cell (duration: 6) at <0, 0>
+           [Tick 0085] Completed job for energy_cell, output added to storage at <0, 0> at station DualFacility
+           [Tick 0085] Started job for energy_cell (duration: 6) at <0, 0>
+           [Tick 0091] Completed job for energy_cell, output added to storage at <0, 0> at station DualFacility
+           [Tick 0091] Started job for energy_cell (duration: 6) at <0, 0>
+           [Tick 0097] Completed job for energy_cell, output added to storage at <0, 0> at station DualFacility
+           [Tick 0097] Started job for energy_cell (duration: 6) at <0, 0>         
+         */
+
+        Assert.Equal(5, metal);
+        Assert.Equal(0, oreLeft);
+        Assert.Equal(0, storage.GetIncomingAmount(energyCell));
+
+        Assert.Contains(logs, l => l is ProductionCompletedLog { ResourceId: "metal_bar", });
+        Assert.Contains(logs, l => l is ProductionCompletedLog { ResourceId: "energy_cell", });
+    }
+
+    [Fact]
+    public void SolarGenerator_ProducesEnergyCell_UsingNewWorkshopSystem()
+    {
+        var gameData = GameData.GetDefault();
+        var energyCell = gameData.GetResource("energy_cell");
+        var solarShop = gameData.GetWorkshop("solar_generator");
+
+        var productionFacility = new ProductionFacility { Name = "Solar Plant", Position = new Vector2(0, 0), };
+
+
+        productionFacility.AddProductionModule(solarShop);
+
+        var ticker = new Ticker { GameData = gameData, };
+        ticker.Register(productionFacility);
+        gameData.Facilities.Add(productionFacility);
+
+        var ticksToRun = 20;
+        ticker.RunTicks(ticksToRun);
+
+        var amountProduced = productionFacility.GetStorage().GetAmount(energyCell);
+        var logs = gameData.GetAllLogs();
+
+        Assert.True(amountProduced >= 3, $"Expected at least 3 energy cells, got {amountProduced}");
+        Assert.Contains(logs, l => l is ProductionCompletedLog log && log.ResourceId == energyCell.Id);
+    }
+
+    [Fact]
+    public void MetalForge_UsesDesperateBulkRecipe_WithDesperateStrategy()
+    {
+        var gameData = GameData.GetDefault();
+        var ore = gameData.GetResource("ore");
+        var energy = gameData.GetResource("energy_cell");
+        var metalForge = gameData.GetWorkshop("metal_forge");
+        metalForge.Strategy = new DesperateProductionStrategy();
+
+        var facility = new ProductionFacility
+        {
+            Name = "Emergency Forge",
+            Position = new Vector2(0, 0),
+        };
+
+        facility.GetStorage().Add(ore, 50);
+        facility.GetStorage().Add(energy, 20);
+        
+        facility.AddProductionModule(metalForge);
+
+        var ticker = new Ticker { GameData = gameData, };
+        ticker.Register(facility);
+        gameData.Facilities.Add(facility);
+
+        ticker.RunTicks(2); // enough for one job to start
+
+        var logs = gameData.GetAllLogs();
+        var startedLog = logs.OfType<ProductionStartedLog>().FirstOrDefault();
+
+        Assert.NotNull(startedLog);
+        Assert.Equal("recipe_metal_bar_bulk", startedLog.Recipe.Id); //FAILS
+    }
+
+    [Fact]
+    public void MetalForge_UsesLeanRecipe_WithHighestBenefitStrategy()
+    {
+        var gameData = GameData.GetDefault();
+        var ore = gameData.GetResource("ore");
+        var energy = gameData.GetResource("energy_cell");
+        var metalForge = gameData.GetWorkshop("metal_forge");
+
+        var facility = new ProductionFacility
+        {
+            Name = "Efficient Forge",
+            Position = new Vector2(0, 0),
+        };
+
+        facility.GetStorage().Add(ore, 50);
+        facility.GetStorage().Add(energy, 20);
+        facility.AddProductionModule(metalForge);
+
+        var ticker = new Ticker { GameData = gameData };
+        ticker.Register(facility);
+        gameData.Facilities.Add(facility);
+
+        ticker.RunTicks(2); // enough for one job to start
+
+        var logs = gameData.GetAllLogs();
+        var startedLog = logs.OfType<ProductionStartedLog>().FirstOrDefault();
+
+        Assert.NotNull(startedLog);
+        Assert.Equal("recipe_metal_bar", startedLog.Recipe.Id); // ✅ Lean recipe should now win
     }
 }

@@ -1,10 +1,61 @@
 ﻿namespace Factory.Core;
 
+
+public class HighestBenefitProductionStrategy : IProductionStrategy
+{
+    public Recipe? SelectRecipe(ResourceStorage storage, List<Recipe> availableRecipes)
+    {
+        return availableRecipes
+            .Where(r => r.Inputs.All(i => storage.GetAmount(i.Key) >= i.Value))
+            .OrderByDescending(r =>
+            {
+                var inputCost = r.Inputs.Sum(i => i.Key.BaseValue * i.Value);
+                var outputValue = r.Output.BaseValue * r.OutputAmount;
+                var netValue = outputValue - inputCost;
+                var valuePerTick = netValue / r.Duration;
+                return valuePerTick;
+            })
+            .FirstOrDefault();
+    }
+}
+
+public class DesperateProductionStrategy : IProductionStrategy
+{
+    public Recipe? SelectRecipe(ResourceStorage storage, List<Recipe> availableRecipes)
+    {
+        return availableRecipes
+            .Where(r => r.Inputs.All(i => storage.GetAmount(i.Key) >= i.Value))
+            .OrderBy(r =>
+            {
+                var outputValue = r.Output.BaseValue * r.OutputAmount;
+                var desperationScore = r.Duration / outputValue;  // Lower = better
+                return desperationScore;
+            })
+            .FirstOrDefault();
+    }
+}
+
+public interface IProductionStrategy
+{
+    Recipe? SelectRecipe(ResourceStorage storage, List<Recipe> availableRecipes);
+}
+
 public class ProductionFacility : Entity, IUpdatable
 {
     private readonly ResourceStorage _storage;
     private readonly Dictionary<Recipe, int> _workshops;
     private readonly Dictionary<Recipe, List<ProductionJob>> _activeJobs;
+
+    private readonly List<WorkshopInstance> _workshopInstances = [];
+    private bool UseFlexibleWorkshops => _workshops.Count == 0;
+
+
+    public ProductionFacility()
+    {
+        _storage = new ResourceStorage();
+        _workshops = new Dictionary<Recipe, int>();
+        _activeJobs = [];
+    }
 
     public ProductionFacility(ResourceStorage storage, Dictionary<Recipe, int> recipeWorkshopAssignments)
     {
@@ -46,13 +97,54 @@ public class ProductionFacility : Entity, IUpdatable
         LogLines.Add(new WorkshopAddedLog(0, this, recipe.Output.Id, count));
     }
 
+    public void AddProductionModule(ProductionModule productionModule)
+    {
+        _workshopInstances.Add(new WorkshopInstance { Module = productionModule });
+        //LogLines.Add(new FlexibleWorkshopAddedLog(0, this, productionModule.Recipes.Select(r => r.Output.Id).ToList()));
+    }
+
     public void Tick(int currentTick)
+    {
+        if (UseFlexibleWorkshops) { TickFlexible(currentTick); }
+        else { TickLegacy(currentTick); }
+    }
+
+    private void TickFlexible(int currentTick)
+    {
+        foreach (var instance in _workshopInstances)
+        {
+            var job = instance.ActiveJob;
+
+            if (job != null)
+            {
+                job.Elapsed++;
+                if (job.Elapsed >= job.Recipe.Duration)
+                {
+                    _storage.Add(job.Recipe.Output, job.Recipe.OutputAmount);
+                    LogLines.Add(new ProductionCompletedLog(currentTick, this, job.Recipe.Output.Id, job.Recipe.OutputAmount));
+                    instance.ActiveJob = null;
+                }
+            }
+
+            if (instance.ActiveJob == null)
+            {
+                var chosen = instance.Module.Strategy.SelectRecipe(_storage, instance.Module.Recipes);
+                if (chosen != null && CanConsumeInputs(chosen.Inputs))
+                {
+                    ConsumeInputs(chosen.Inputs);
+                    instance.ActiveJob = new ProductionJob { Recipe = chosen };
+                    LogLines.Add(new ProductionStartedLog(currentTick, this, chosen.Output.Id, chosen.Duration, Position, chosen));
+                }
+            }
+        }
+    }
+
+    public void TickLegacy(int currentTick)
     {
         foreach (var (recipe, jobs) in _activeJobs)
         {
             var output = recipe.Output;
-            // Step 1: Progress jobs
-            for (var i = jobs.Count - 1; i >= 0; i--)
+            for (var i = jobs.Count - 1; i >= 0; i--) // Step 1: Progress jobs
             {
                 var job = jobs[i];
                 job.Elapsed++;
@@ -64,20 +156,20 @@ public class ProductionFacility : Entity, IUpdatable
                 LogLines.Add(new ProductionCompletedLog(currentTick, this, output.Id, recipe.OutputAmount));
             }
 
-            // Step 2: Start new jobs
-            var availableWorkshops = _workshops[recipe] - jobs.Count;
+            var availableWorkshops = _workshops[recipe] - jobs.Count; // Step 2: Start new jobs
             for (var i = 0; i < availableWorkshops; i++)
             {
                 if (CanConsumeInputs(recipe.Inputs))
                 {
                     ConsumeInputs(recipe.Inputs);
                     jobs.Add(new ProductionJob());
-                    LogLines.Add(new ProductionStartedLog(currentTick, this, output.Id, recipe.Duration, Position));
+                    LogLines.Add(new ProductionStartedLog(currentTick, this, output.Id, recipe.Duration, Position, recipe));
                 }
                 else { break; }
             }
         }
     }
+
     private bool CanConsumeInputs(Dictionary<Resource, int> inputs)
     {
         foreach (var (resource, amount) in inputs) { if (_storage.GetAmount(resource) < amount) { return false; } }
@@ -123,6 +215,12 @@ public class ProductionFacility : Entity, IUpdatable
     }
 }
 
+public class WorkshopInstance
+{
+    public required ProductionModule Module { get; set; } 
+    public ProductionJob? ActiveJob { get; set; }
+}
+
 public class ResourceRequest(Resource resource, int amount)
 {
     public Resource Resource { get; } = resource;
@@ -159,6 +257,19 @@ public class ResourceStorage
     public int GetTotalIncludingIncoming(Resource type) => GetAmount(type) + GetIncomingAmount(type);
     public int GetAmount(Resource type) => _resources.GetValueOrDefault(type, 0);
     public int GetIncomingAmount(Resource type) => _incoming.GetValueOrDefault(type, 0);
+
+    public static ResourceStorage GetClone(ResourceStorage original)
+    {
+        var clone = new ResourceStorage();
+        foreach (var (res, amount) in original._resources) { clone.Add(res, amount); }
+        foreach (var (res, amount) in original._incoming) { clone.MarkIncoming(res, amount); }
+        return clone;
+    }
+
 }
 
-public class ProductionJob { public int Elapsed; }
+public class ProductionJob
+{
+    public Recipe Recipe { get; set; } = null!;
+    public int Elapsed;
+}
