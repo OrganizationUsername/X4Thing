@@ -4,8 +4,14 @@ public class Ticker
 {
     private readonly List<IUpdatable> _tickables = [];
     public int CurrentTick { get; private set; }
-
     public void Register(IUpdatable tickable) => _tickables.Add(tickable);
+    public void RegisterAll()
+    {
+        if (GameData == null) { return; }
+        foreach (var f in GameData.Facilities) Register(f);
+        foreach (var t in GameData.Transporters) Register(t);
+        foreach (var f in GameData.Fighters) Register(f);
+    }
     public GameData? GameData { get; set; }
 
     public void Tick()

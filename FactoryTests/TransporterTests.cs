@@ -22,14 +22,12 @@ public class TransporterTests
         transporter.AssignTask(source, dest, [new ResourceAmount(metalBar, 3),]);
 
         var ticker = new Ticker { GameData = gameData, };
-        ticker.Register(source);
-        ticker.Register(dest);
-        ticker.Register(transporter);
+
+        gameData.AddTickables([source, dest, transporter,]);
+
+        ticker.RegisterAll();
         ticker.RunTicks(1);
 
-        gameData.Facilities.Add(source);
-        gameData.Facilities.Add(dest);
-        gameData.Transporters.Add(transporter);
         var logs = gameData.GetAllLogs();
         gameData.GetAllLogsFormatted();
 
@@ -90,16 +88,13 @@ public class TransporterTests
 
         // Register all
         var ticker = new Ticker { GameData = gameData, };
-        ticker.Register(source);
-        ticker.Register(dest);
-        ticker.Register(transporter);
+        gameData.AddTickables([source, dest, transporter,]);
+        ticker.RegisterAll();
 
         // Run: pickup + delivery + production
         ticker.RunTicks(17);
 
-        gameData.Transporters.Add(transporter);
-        gameData.Facilities.Add(source);
-        gameData.Facilities.Add(dest);
+
 
         var logs = gameData.GetAllLogs();
         //var formatted = gameData.GetAllLogsFormatted();
@@ -153,14 +148,9 @@ public class TransporterTests
 
         // Register for ticking
         var ticker = new Ticker { GameData = gameData, };
-        ticker.Register(sourceA);
-        ticker.Register(destA);
-        ticker.Register(sourceB);
-        ticker.Register(destB);
-        ticker.Register(transporter);
 
-        gameData.Facilities.AddRange([sourceA, destA, sourceB, destB,]);
-        gameData.Transporters.Add(transporter);
+        gameData.AddTickables([sourceA, destA, sourceB, destB, transporter,]);
+        ticker.RegisterAll();
 
         // Run enough ticks to complete both deliveries
         ticker.RunTicks(25);
@@ -212,6 +202,7 @@ public class TransporterTests
 
         var ticker = new Ticker();
         ticker.Register(transporter);
+        //ToDo: This unit test doesn't register/tick everything, so it's suspect at best.
 
         // --- Tick 1: Pickup from Source A (already at 0,0)
         // --- Tick 1: Pickup from Source A (already at 0,0)
@@ -228,7 +219,6 @@ public class TransporterTests
         // ✅ During transport, still carrying
         Assert.True(transporter.Position.X < 5f);
         Assert.Equal(2, transporter.Carrying.Sum(x => x.Amount));
-
 
         // --- Tick 7: Deliver to Destination A
         ticker.RunTicks(1);
@@ -273,13 +263,13 @@ public class TransporterTests
         var transporter = new Transporter { Position = new Vector2(0, 0), SpeedPerTick = 5f, MaxVolume = 10f, Name = "Transporter", }; // Can carry up to 6 metal bars (6 x 1.5 = 9.0)
 
         transporter.AssignTask(source, dest, [new ResourceAmount(metalBar, 500),]);
+        //This is done manually right now since the destination doesn't request materials.
 
         var ticker = new Ticker();
-        ticker.Register(transporter);
+        ticker.Register(transporter); //since the behavior is hard-coded, we can't automatically register things
         ticker.Register(dest);
 
         ticker.RunTicks(10); // Tick 1: pickup, Tick 2-3: movement & delivery
-
         gameData.Facilities.Add(source);
         gameData.Facilities.Add(dest);
         gameData.Transporters.Add(transporter);
@@ -315,16 +305,12 @@ public class TransporterTests
 
         var transporter = new Transporter { Position = new Vector2(0, 0), SpeedPerTick = 5f, MaxVolume = 10f, Id = 3, Name = "Transporter", };
 
-        gameData.Facilities.Add(source);
-        gameData.Facilities.Add(dest);
-        gameData.Transporters.Add(transporter);
+        gameData.AddTickables([source, dest, transporter,]);
 
         destStorage.Add(metalBar, -10);
 
         var ticker = new Ticker { GameData = gameData, };
-        ticker.Register(source);
-        ticker.Register(dest);
-        ticker.Register(transporter);
+        ticker.RegisterAll();
 
         ticker.RunTicks(5);
 
@@ -354,20 +340,14 @@ public class TransporterTests
 
         var transporter = new Transporter { Position = new Vector2(0, 0), SpeedPerTick = 5f, MaxVolume = 10f, Id = 3, Name = "Transporter", };
 
-        gameData.Facilities.Add(source);
-        gameData.Facilities.Add(dest);
-        gameData.Transporters.Add(transporter);
+        gameData.AddTickables([source, dest, transporter,]);
 
         // Fake a pull request by simulating negative metalBars at the destination
         destStorage.Add(metalBar, -10);
 
         var ticker = new Ticker { GameData = gameData, };
-        ticker.Register(source);
-        ticker.Register(dest);
-        ticker.Register(transporter);
-
-        // Run full cycle of assignment → pickup → delivery
-        ticker.RunTicks(5);
+        ticker.RegisterAll();
+        ticker.RunTicks(5); // Run full cycle of assignment → pickup → delivery
 
         // Collect logs at the end
         var logs = gameData.GetAllLogs();
@@ -410,14 +390,10 @@ public class TransporterTests
 
         var transporter = new Transporter { Position = new Vector2(0, 0), SpeedPerTick = 5f, MaxVolume = 10f, Id = 0, Name = "Transporter", };
 
-        gameData.Facilities.Add(source);
-        gameData.Facilities.Add(dest);
-        gameData.Transporters.Add(transporter);
+        gameData.AddTickables([source, dest, transporter,]);
 
         var ticker = new Ticker { GameData = gameData, };
-        ticker.Register(source);
-        ticker.Register(dest);
-        ticker.Register(transporter);
+        ticker.RegisterAll();
 
         // Run ticks to let production, transport, and consumption happen
         ticker.RunTicks(25);
@@ -460,14 +436,10 @@ public class TransporterTests
 
         var transporter = new Transporter { Position = new Vector2(5, 0), SpeedPerTick = 1f, MaxVolume = 10f, Id = 0, Name = "Transporter", };
 
-        gameData.Facilities.Add(source);
-        gameData.Facilities.Add(dest);
-        gameData.Transporters.Add(transporter);
+        gameData.AddTickables([source, dest, transporter,]);
 
         var ticker = new Ticker { GameData = gameData, };
-        ticker.Register(source);
-        ticker.Register(dest);
-        ticker.Register(transporter);
+        ticker.RegisterAll();
 
         // --- All ticks up front
         ticker.RunTicks(31);
@@ -536,14 +508,10 @@ public class TransporterTests
 
         var transporter = new Transporter { Position = new Vector2(0, 0), SpeedPerTick = 1f, MaxVolume = 10f, Id = 0, Name = "Transporter", };
 
-        gameData.Facilities.AddRange([source, dest,]);
-        gameData.Transporters.Add(transporter);
+        gameData.AddTickables([source, dest, transporter,]);
 
         var ticker = new Ticker { GameData = gameData, };
-        ticker.Register(source);
-        ticker.Register(dest);
-        ticker.Register(transporter);
-
+        ticker.RegisterAll();
         ticker.RunTicks(40);
 
         var logs = gameData.GetAllLogs();
@@ -656,15 +624,10 @@ public class TransporterTests
         var transporter = new Transporter { Position = new Vector2(0, 0), SpeedPerTick = 1f, MaxVolume = 50f, Id = 42, Name = "Transporter", };
 
         // --- Setup
-        gameData.Facilities.AddRange([a, b, c, d,]);
-        gameData.Transporters.Add(transporter);
+        gameData.AddTickables([a, b, c, d, transporter,]);
 
         var ticker = new Ticker { GameData = gameData, };
-        ticker.Register(a);
-        ticker.Register(b);
-        ticker.Register(c);
-        ticker.Register(d);
-        ticker.Register(transporter);
+        ticker.RegisterAll();
 
         // --- Run simulation
         ticker.RunTicks(481);
@@ -854,14 +817,9 @@ public class TransporterTests
         // Sneak plastic into inventory before delivery (simulate weird state)
         transporter.Carrying.Add(new ResourceAmount(plastic, 1));
 
+        gameData.AddTickables([source, dest, transporter,]);
         var ticker = new Ticker { GameData = gameData, };
-        gameData.Transporters.Add(transporter);
-        gameData.Facilities.Add(source);
-        gameData.Facilities.Add(dest);
-
-        ticker.Register(source);
-        ticker.Register(dest);
-        ticker.Register(transporter);
+        ticker.RegisterAll();
 
         // --- Tick: reach destination and attempt delivery
         ticker.RunTicks(2); // transporter reaches destination and delivers
@@ -909,13 +867,9 @@ public class TransporterTests
         var transporter = new Transporter { Id = 1, Position = new Vector2(0, 0), SpeedPerTick = 1f, MaxVolume = 100f, Name = "Transporter", };
 
         // --- Setup system
+        gameData.AddTickables([source, dest, transporter,]);
         var ticker = new Ticker { GameData = gameData, };
-        gameData.Facilities.Add(source);
-        gameData.Facilities.Add(dest);
-        gameData.Transporters.Add(transporter);
-        ticker.Register(source);
-        ticker.Register(dest);
-        ticker.Register(transporter);
+        ticker.RegisterAll();
 
         // --- Assign transport of 10 ore
         transporter.AssignTask(source, dest, [new ResourceAmount(ore, 10),], currentTick: 0); //This is a bit more manual than I'd like
@@ -954,13 +908,9 @@ public class TransporterTests
         var transporter = new Transporter { Id = 1, Position = new Vector2(0, 0), SpeedPerTick = 1f, MaxVolume = 100f, Name = "Transporter", }; // --- Transporter with just enough volume, slow movement
 
         // --- Register all
+        gameData.AddTickables([source, dest, transporter,]);
         var ticker = new Ticker { GameData = gameData, };
-        gameData.Facilities.Add(source);
-        gameData.Facilities.Add(dest);
-        gameData.Transporters.Add(transporter);
-        ticker.Register(source);
-        ticker.Register(dest);
-        ticker.Register(transporter);
+        ticker.RegisterAll();
 
         // --- Simulate decision logic that assigns tasks based on demand/supply
         ticker.RunTicks(50);
@@ -992,7 +942,4 @@ public class TransporterTests
         Assert.Equal(01, destStorage.GetIncomingAmount(ore));
         Assert.Equal(34, destStorage.GetTotalIncludingIncoming(ore));
     }
-
-
-
 }
