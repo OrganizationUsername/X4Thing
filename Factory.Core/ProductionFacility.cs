@@ -54,7 +54,7 @@ public class ProductionFacility : Entity, IUpdatable
     public ProductionFacility()
     {
         _storage = new ResourceStorage();
-        _workshops = new Dictionary<Recipe, int>();
+        _workshops = [];
         _activeJobs = [];
     }
 

@@ -17,6 +17,8 @@ public class Ticker
     public void Tick()
     {
         CurrentTick++;
+        //Add a new tick where we update what stations want, what's on the way, and what's expected to leave
+        GameData?.DemandManagerTick();
         foreach (var tickable in _tickables)
         {
             GameData?.Tick(CurrentTick); //ToDo: This probably shouldn't be in the loop

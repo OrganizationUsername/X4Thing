@@ -573,7 +573,6 @@ public class FactoryTests
         facility.GetStorage().Add(ore, 50);
         facility.GetStorage().Add(energy, 20);
 
-
         var ticker = new Ticker { GameData = gameData, };
         ticker.Register(facility);
         gameData.Facilities.Add(facility);
@@ -643,47 +642,43 @@ public class FactoryTests
         Assert.False(anyStarted, "Expected no computer part jobs to start due to missing metal bars");
     }
 
-    //[Fact] //not working yet. Need to 
-    public void GameData_BoostsMetalProduction_WhenWidespreadShortageDetected()
+    [Fact]
+    public void GameData_SwitchesToDesperate_WhenStationStarvesForMetalBars()
     {
         var gameData = GameData.GetDefault();
         var ore = gameData.GetResource("ore");
         var energy = gameData.GetResource("energy_cell");
-        var metalBar = gameData.GetResource("metal_bar");
-        var plastic = gameData.GetResource("plastic");
-        var forge = gameData.GetWorkshop("metal_forge");
-        forge.Strategy = new HighestBenefitProductionStrategy();
-        var assembler = gameData.GetWorkshop("computer_assembler"); //using this 5 times. Make sure it actually works. Should since each one makes a new WorkshopInstance
 
-        var station = new ProductionFacility { Name = $"Assembler", Position = new Vector2(10, 0), };
+        var forgeModule = gameData.GetWorkshop("metal_forge");
+        forgeModule.Strategy = new HighestBenefitProductionStrategy(); // Initially lean
 
-        for (var i = 0; i < 4; i++) // Create 4 assembler stations
-        {
-            station.AddProductionModule(assembler);
-            station.GetStorage().Add(plastic, 100);
-        }
-        station.AddProductionModule(forge);
-        station.GetStorage().Add(metalBar, 0); // Starts empty
-        station.GetStorage().Add(ore, 500);
-        station.GetStorage().Add(energy, 200);
+        var station = new ProductionFacility { Name = "Solo Assembler", Position = new Vector2(10, 0), };
+
+        station.AddProductionModule(forgeModule);
+
+        // Fill with plastic for assemblers, and materials for forge
+        station.GetStorage().Add(ore, 10); //Enough to run it for 50 ticks
+        station.GetStorage().Add(energy, 2_000);
         gameData.Facilities.Add(station);
 
+        // Enable metal bar shortage detection
+        //gameData.EnableShortageDetectionFor(metalBar, triggerAfterTicks: 80); //this method doesn't exist
+        //This doesn't work yet. I should 
+
         var ticker = new Ticker { GameData = gameData, };
-        ticker.Register(station); //ToDo: I should stop registering facilities directly in the ticker and just grab everything from the gameData
+        ticker.Register(station);
 
-        // Simulate enough ticks for demand pressure to mount
-        //ToDo: This is what still needs to be implemented
-        ticker.RunTicks(200);
+        // Act
+        ticker.RunTicks(150);
 
-        // ⏳ Forge should now have flipped to DesperateProductionStrategy
-        var activeStrategy = forge.Strategy;
-        Assert.IsType<DesperateProductionStrategy>(activeStrategy);
+        // Assert
+        var strategy = forgeModule.Strategy;
+        Assert.IsType<DesperateProductionStrategy>(strategy);
+
+        // Optionally inspect logs for debugging
+        var logs = gameData.GetAllLogsFormatted();
+        Assert.Contains("desperate", logs.ToLower()); // if you later log the switch
     }
+
     //ToDo: At some point I have to figure out when to calm down. Maybe it depends on how many I have on hand and how long I've had a large stock.
-
-    public void HaveStationReportWhatItDesperatelyNeeds()
-    {
-
-    }
-
 }

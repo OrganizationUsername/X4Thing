@@ -7,6 +7,8 @@ public class GameData(Dictionary<string, Resource> resources, Dictionary<string,
     public Dictionary<string, Resource> Resources { get; } = resources;
     public Dictionary<string, Recipe> Recipes { get; } = recipes;
     public Dictionary<string, ProductionModule> Workshops { get; } = workshops;
+    public DemandManager DemandManager { get; } = new();
+    public void DemandManagerTick() => DemandManager.Refresh(Facilities);
 
     public void AddTickables(ICollection<IUpdatable> tickables)
     {
