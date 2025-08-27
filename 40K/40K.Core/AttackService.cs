@@ -29,29 +29,56 @@ public static class AttackService
 
     public static int FireOneModelOneProfile(Model attacker, Unit target, WeaponProfile profile, int range, IDice dice, int hitMod = 0)
     {
-        var distance = NearestDistanceInches(attacker, target); // distance now taken from board state
+        var distance = NearestDistanceInches(attacker, target);
+        if (distance > profile.Range) return 0;
 
-        if (distance > profile.Range) { return 0; } // hard gate: out of weapon range → no shots
+        // Add defender’s modifier from its profile
+        var defenderMod = target.Alive
+            .Select(m => m.Profile.BallisticSkillModifier(distance))
+            .DefaultIfEmpty(0)
+            .Min(); // or Max/aggregate, depending on stacking rules
+
+        var effectiveHitMod = hitMod + defenderMod;
 
         var unsavedWounds = 0;
         var shots = profile.GetShots(dice, distance);
 
         for (var i = 0; i < shots; i++)
         {
-            if (!Resolver.Hits(attacker.Profile.Stats.BallisticSkill, dice, hitMod)) { continue; }
+            if (!Resolver.Hits(attacker.Profile.Stats.BallisticSkill, dice, effectiveHitMod)) continue;
             var victim = target.Alive.FirstOrDefault();
-            if (victim is null) { break; }
+            if (victim is null) break;
 
-            if (!Resolver.Wounds(profile.Strength, victim.Profile.Stats.Toughness, dice)) { continue; }
+            if (!Resolver.Wounds(profile.Strength, victim.Profile.Stats.Toughness, dice)) continue;
 
             var saved = Resolver.Saved(profile.Ap, victim.Profile.Stats.Saves.Armor, victim.Profile.Stats.Saves.Invulnerable, dice);
-            if (saved) { continue; }
+            if (saved) continue;
 
             var dmg = profile.Damage(dice);
             victim.ApplyDamage(dmg);
             unsavedWounds++;
         }
         return unsavedWounds;
+    }
+
+    public static int FireAllWeapons(Model attacker, Unit target, IDice dice, int hitMod = 0, Func<Weapon, WeaponProfile>? selectProfile = null)
+    {
+        selectProfile ??= w => w.Profiles[0]; // default: first profile
+
+        var total = 0;
+        foreach (var w in attacker.Weapons)
+        {
+            var p = selectProfile(w);
+            total += FireOneModelOneProfile(attacker, target, p, range: 0, dice, hitMod);
+        }
+        return total;
+    }
+
+    public static int FireUnitAllWeapons(Unit shooters, Unit target, IDice dice, int hitMod = 0, Func<Weapon, WeaponProfile>? selectProfile = null)
+    {
+        var total = 0;
+        foreach (var m in shooters.Alive) { total += FireAllWeapons(m, target, dice, hitMod, selectProfile); }
+        return total;
     }
 }
 
@@ -81,7 +108,6 @@ public static class Resolver
         return s * 2 <= t ? 6 : 5;
     }
 
-    // ap ≤ 0 (e.g., 0, -1, -2). Armor like 3 means 3+. Invuln ignores Ap.
     public static bool Saved(int ap, int? armorSave, int? invulnerableSave, IDice dice)
     {
         var armorRequired = armorSave - ap; // Ap worsens save
@@ -98,7 +124,11 @@ public static class Resolver
     }
 }
 
-public sealed class SaveProfile { public int Armor { get; init; } public int? Invulnerable { get; init; } }
+public sealed class SaveProfile
+{
+    public int Armor { get; init; }
+    public int? Invulnerable { get; init; }
+}
 
 public sealed class Statline
 {
@@ -110,13 +140,16 @@ public sealed class Statline
 
 public sealed class UnitProfile
 {
+    //ToDo: The next feature to add is having different stats as units take damage (e.g., ballistic skill goes down as wounds are taken)
     public required string Name { get; init; }
     public Statline Stats { get; init; } = new();
+    public Func<int, int> BallisticSkillModifier { get; init; } = _ => 0; //For example: XV95 Ghostkeel BattleSuit has -1 to hit if target is >6" away
 }
 
 // One weapon can have many profiles; you must select one to fire.
 public sealed class WeaponProfile
 {
+    //ToDo: Later on, we'll end up passing in some strategy to select which profile to use (e.g: for multimode weapons)
     public required string Name { get; init; }
     public int Range { get; init; }
     public int Strength { get; init; }
