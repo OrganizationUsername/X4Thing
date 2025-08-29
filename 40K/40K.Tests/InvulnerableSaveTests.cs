@@ -4,7 +4,7 @@ namespace _40K.Tests;
 
 public sealed class WoundSaveTests
 {
-    private static UnitProfile MarineWithInvuln6AndArmor3 => new()
+    private static ModelProfile MarineWithInvuln6AndArmor3 => new()
     {
         Name = "Target",
         Stats = new Statline
@@ -26,7 +26,7 @@ public sealed class WoundSaveTests
     private static WeaponProfile ApFiveWeapon => new() { Name = "Test Gun (AP-5)", Range = 24, Strength = 4, Ap = -5, Shots = _ => 1, Damage = _ => 1, };
     private static WeaponProfile ApZeroWeapon => new() { Name = "Test Gun (AP0)", Range = 24, Strength = 4, Ap = 0, Shots = _ => 1, Damage = _ => 1, };
 
-    private static Model SimpleShooter() => new(new UnitProfile
+    private static Model SimpleShooter() => new(new ModelProfile
     {
         Name = "Shooter",
         Stats = new Statline

@@ -5,7 +5,7 @@ namespace _40K.Tests;
 
 public class TenIntercessorsVsGhostkeelTests
 {
-    private static UnitProfile IntercessorProfile => new()
+    private static ModelProfile IntercessorProfile => new()
     {
         Name = "Intercessor",
         Stats = new Statline
@@ -17,7 +17,7 @@ public class TenIntercessorsVsGhostkeelTests
         },
     };
 
-    private static UnitProfile GhostkeelProfile => new()
+    private static ModelProfile GhostkeelProfile => new()
     {
         Name = "XV95 Ghostkeel",
         Stats = new Statline
@@ -191,28 +191,29 @@ public class TenIntercessorsVsGhostkeelTests
     public void Ghostkeel_FusionCollider_At12in_TwoShots_KillsOne_AndWoundsNext()
     {
         // Ghostkeel at 0", Marines at 12" (within 18" range)
-        var ghost = GhostkeelAt(new Vector2(0, 0)); // this builder already adds the collider
+        var ghost = GhostkeelAt(new Vector2(0, 0)); // builder adds the collider
         var marines = new Unit { Name = "Marines", };
         var m1 = new Model(IntercessorProfile) { Position = new Vector2(12, 0), };
         var m2 = new Model(IntercessorProfile) { Position = new Vector2(12, 0), };
         marines.Models.Add(m1);
         marines.Models.Add(m2);
 
-        var collider = ghost.Models[0].Weapons[0].Profiles[0]; // Fusion Collider
+        var collider = ghost.Models[0].Weapons[0].Profiles[0]; // Fusion Collider (AP-4)
 
+        // AP-4 vs 3+ armor => 7+ required => impossible save => NO save roll consumed.
+        // Per shot now: Hit, Wound, Damage (no Save).
+        // Shot1: Hit=5, Wound=4 (2+), Damage=3 -> kills m1 (2W)
+        // Shot2: Hit=4, Wound=4 (2+), Damage=1 -> m2 to 1W
         var dice = new ScriptedDice(
-            d6: [
-                5, 4, 2, 3, // Shot1: Hit=5, Wound=4 (2+), Save=2 (fails vs 6+ after clamp), Damage=3 -> kills m1 (2W).
-                4, 4, 2, 1, // Shot2: Hit=4, Wound=4 (2+), Save=2 (fails), Damage=1 -> m2 down to 1W.
-            ],
-            d3: [2,] // Script: D3=2 shots.
+            d6: [5, 4, 3, 4, 4, 1,],
+            d3: [2,] // Heavy D3 -> 2 shots
         );
 
         var unsaved = AttackService.FireOneModelOneProfile(ghost.Models[0], marines, collider, 0, dice);
 
-        Assert.True(unsaved >= 2);      // two unsaved wounds minimum
-        Assert.False(m1.IsAlive);       // first Marine dead
-        Assert.Equal(1, m2.RemainingWounds); // second Marine took 1
+        Assert.True(unsaved >= 2);
+        Assert.False(m1.IsAlive);
+        Assert.Equal(1, m2.RemainingWounds);
     }
 
     [Fact]

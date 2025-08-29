@@ -17,8 +17,8 @@ internal class Program
 public static class GhostkeelVolleySim
 {
     // ---- Profiles ----
-    private static UnitProfile IntercessorProfile => new() { Name = "Intercessor", Stats = new Statline { BallisticSkill = 3, Toughness = 4, WoundsPerModel = 2, Saves = new SaveProfile { Armor = 3, }, }, };
-    private static UnitProfile GhostkeelProfile => new() { Name = "XV95 Ghostkeel", Stats = new Statline { BallisticSkill = 3, Toughness = 6, WoundsPerModel = 6, Saves = new SaveProfile { Armor = 3, Invulnerable = 5, }, }, BallisticSkillModifier = dist => dist > 6 ? -1 : 0, };
+    private static ModelProfile IntercessorProfile => new() { Name = "Intercessor", Stats = new Statline { BallisticSkill = 3, Toughness = 4, WoundsPerModel = 2, Saves = new SaveProfile { Armor = 3, }, }, };
+    private static ModelProfile GhostkeelProfile => new() { Name = "XV95 Ghostkeel", Stats = new Statline { BallisticSkill = 4, Toughness = 6, WoundsPerModel = 6, Saves = new SaveProfile { Armor = 3, Invulnerable = 5, }, }, BallisticSkillModifier = dist => dist > 6 ? -1 : 0, };
 
     // ---- Weapons ----
     private static Weapon BurstCannon() => new() { Name = "Burst Cannon", Profiles = { new WeaponProfile { Name = "Burst Cannon (Assault 4)", Range = 18, Strength = 5, Ap = 0, Shots = _ => 4, Damage = _ => 1, }, }, };

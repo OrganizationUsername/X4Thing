@@ -1,11 +1,16 @@
-using _40K.Core;
+﻿using _40K.Core;
 
 namespace _40K.Tests;
 
 public class ShootingTests
 {
-    private static UnitProfile IntercessorProfile => new() { Name = "Intercessor", Stats = new Statline { BallisticSkill = 3, Toughness = 4, WoundsPerModel = 2, Saves = new SaveProfile { Armor = 3, }, }, };
-    private static UnitProfile GhostkeelProfile => new() { Name = "Ghostkeel", Stats = new Statline { BallisticSkill = 3, Toughness = 6, WoundsPerModel = 6, Saves = new SaveProfile { Armor = 3, Invulnerable = 5, }, }, };
+    private static ModelProfile IntercessorProfile => new() { Name = "Intercessor", Stats = new Statline { BallisticSkill = 3, Toughness = 4, WoundsPerModel = 2, Saves = new SaveProfile { Armor = 3, }, }, };
+    private static ModelProfile GhostkeelProfile => new()
+    {
+        Name = "Ghostkeel",
+        Stats = new Statline { BallisticSkill = 3, Toughness = 6, WoundsPerModel = 6, Saves = new SaveProfile { Armor = 3, Invulnerable = 5, }, },
+        Degrading = new DegradingTable { Brackets = { new DegradeBracket(6, 6, 12, 4, 3), new DegradeBracket(3, 5, 8, 5, 2), new DegradeBracket(1, 2, 4, 5, 1), }, },
+    };
 
     private static Weapon BoltRifle() => new() { Name = "Bolt Rifle", Profiles = { new WeaponProfile { Name = "Bolt Rifle (Rapid Fire 1)", Range = 30, Strength = 4, Ap = -1, Shots = _ => 1, Damage = _ => 1, }, }, };
     private static Weapon FusionCollider() => new() { Name = "Fusion Collider", Profiles = { new WeaponProfile { Name = "Fusion Collider (Heavy D3)", Range = 18, Strength = 8, Ap = -4, Shots = d => d.D3(), Damage = d => d.D6(), }, }, };

@@ -25,7 +25,7 @@ public class DistanceBasedHitModTests
     };
 
     // Intercessor data
-    private static UnitProfile IntercessorProfile => new()
+    private static ModelProfile IntercessorProfile => new()
     {
         Name = "Intercessor",
         Stats = new Statline
@@ -38,7 +38,7 @@ public class DistanceBasedHitModTests
     };
 
     // “Ghostkeel-like” single target: T6, 6W, 3+/5++, and the distance-based -1 to be hit beyond 6"
-    private static UnitProfile StealthyTargetProfile => new()
+    private static ModelProfile StealthyTargetProfile => new()
     {
         Name = "Stealthy Target",
         Stats = new Statline

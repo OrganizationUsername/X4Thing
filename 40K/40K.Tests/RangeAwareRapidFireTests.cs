@@ -6,7 +6,7 @@ namespace _40K.Tests;
 public class RangeAwareRapidFireTests
 {
     private static Weapon BoltRifle() => new() { Name = "Bolt Rifle", Profiles = { new WeaponProfile { Name = "Bolt Rifle (Rapid Fire 1)", Range = 30, Strength = 4, Ap = -1, Shots = _ => 1, Damage = _ => 1, ShotsByDistance = (_, dist) => dist <= 15 ? 2 : 1, }, }, }; // ⟵ double shots at half range (≤ 15")
-    private static UnitProfile IntercessorProfile => new() { Name = "Intercessor", Stats = new Statline { BallisticSkill = 3, Toughness = 4, WoundsPerModel = 2, Saves = new SaveProfile { Armor = 3, }, }, };
+    private static ModelProfile IntercessorProfile => new() { Name = "Intercessor", Stats = new Statline { BallisticSkill = 3, Toughness = 4, WoundsPerModel = 2, Saves = new SaveProfile { Armor = 3, }, }, };
     private static Model MarineAt(Vector2 pos) => new(IntercessorProfile) { Position = pos, };
 
     [Fact]
