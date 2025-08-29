@@ -15,8 +15,25 @@ namespace _40K.Core;
 //If they are more than 6" away, enemy subtracts 1 from hit rolls
 */
 
+/*
+ * ToDo:
+    Heavy (+1 to hit if Remained Stationary)
+    Pistol (can shoot in engagement range)
+    Twin-linked (re-roll WOUNDS)
+    Torrent (auto-hits)
+    Anti-<X> (n+) (crits auto-wound on N+ vs tag)
+    Lethal Hits (crits auto-wound)
+    Sustained Hits X (crits add X extra hits)
+    Devastating Wounds (crits → mortal wounds instead of normal)
+    Grenades
+    Shooting at enemies in cover
+    OverWatch (reaction shots)
+    When shooting with model that has brackets, show the current wound count and resulting BS
+ */
+
 public static class AttackService
 {
+    //ToDo: Next is mortal wounds to enemy and mortal wounds to self (e.g., from overcharging)
     private static int NearestDistanceInches(Model attacker, Unit target)
     {
         var a = attacker.Position;
@@ -198,11 +215,11 @@ public sealed class WeaponProfile
         if (IsBlast)
         {
             var adjusted = baseShots + ctx.TargetModels / 5;
-            log?.Write(new CombatEvent(CombatEventType.BlastShotCount, null, Name, null, ctx.TargetModels, null, adjusted, null, null, null));
+            log?.Write(new CombatEvent(CombatEventType.BlastShotCount, null, Name, null, ctx.TargetModels, null, adjusted));
             return adjusted;
         }
 
-        log?.Write(new CombatEvent(CombatEventType.DistanceCountShot, null, Name, null, ctx.DistanceInches, null, baseShots, null, null, null));
+        log?.Write(new CombatEvent(CombatEventType.DistanceCountShot, null, Name, null, ctx.DistanceInches, null, baseShots));
         return ShotsByDistance?.Invoke(dice, ctx.DistanceInches) ?? Shots(dice);
     }
 

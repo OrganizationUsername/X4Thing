@@ -82,7 +82,6 @@ public class BlastFiringTests(ITestOutputHelper output)
         {
             output.WriteLine("Combat Log:");
             output.WriteLine(log.ToLines());
-
             /*
             Combat Log:
                Blast shot count for 10 models: 4
@@ -106,6 +105,4 @@ public class BlastFiringTests(ITestOutputHelper output)
              */
         }
     }
-
-
 }
